@@ -1,33 +1,96 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<link rel="stylesheet" href="https://cdn.jsdelivr.net">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>bdrspen | Creative Portfolio</title>
+    <!-- إضافة مكتبة الأيقونات لتظهر أيقونات السوشيال ميديا -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com">
+    
     <style>
-   /* المتغيرات للوضعين */
+	.footer-tag {
+    width: 100%;
+    padding: 20px 0;
+    text-align: center;
+    margin-top: auto; /* يدفعه لأسفل الصفحة دائماً */
+    z-index: 10;
+}
+
+.footer-link {
+    font-size: 0.75rem;
+    color: #4a6d6a; /* لون هادئ كما في الصورة */
+    text-decoration: none;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    transition: all 0.3s ease;
+    opacity: 0.7;
+}
+
+/* تأثير عند تمرير الماوس */
+.footer-link:hover {
+    color: var(--accent-color); /* يتغير للون التركواز */
+    opacity: 1;
+    letter-spacing: 4px; /* يتوسع قليلاً عند التمرير */
+    text-shadow: 0 0 8px var(--accent-color);
+}
+
+	/* تنسيق حاوية الشعار */
+.logo-container {
+    margin-bottom: 20px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    perspective: 1000px; /* لإعطاء عمق للحركة */
+}
+
+.logo-container img {
+    max-width: 150px;
+    height: auto;
+    cursor: pointer;
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    /* إضافة أنيميشن النبض عند فتح الموقع */
+    animation: logoPulse 3s infinite ease-in-out;
+}
+
+/* تأثير عند مرور الماوس: تكبير مع توهج خفيف */
+.logo-container img:hover {
+    transform: scale(1.1) rotate(2deg);
+    filter: drop-shadow(0 0 10px var(--accent-color));
+}
+
+/* تأثير عند الضغط: تصغير سريع (Feedback) */
+.logo-container img:active {
+    transform: scale(0.9);
+}
+
+/* كود أنيميشن النبض الهادئ */
+@keyframes logoPulse {
+    0% { transform: scale(1); filter: brightness(1); }
+    50% { transform: scale(1.03); filter: brightness(1.1); }
+    100% { transform: scale(1); filter: brightness(1); }
+}
+
+/* التحكم بظهور الشعار حسب الثيم */
+.logo-light { display: none; }
+[data-theme="light"] .logo-light { display: block; }
+[data-theme="light"] .logo-dark { display: none; }
+
+
         :root {
             --bg-color: #020505;
             --accent-color: #00f5d4;
             --text-color: #ffffff;
             --glass-bg: rgba(255, 255, 255, 0.02);
             --blob-opacity: 0.15;
+            --secondary-accent: #00bbff;
         }
 
         [data-theme="light"] {
-            --bg-color: #f0f7f6;
+            --bg-color: #fdf5e6;
             --accent-color: #00a896;
-            --text-color: #1a2e2c;
-            --glass-bg: rgba(0, 0, 0, 0.03);
+            --text-color: #3d2b1f;
+            --glass-bg: rgba(2, 0, 0, 0.07);
             --blob-opacity: 0.3;
-        }       
-	   :root {
-            --bg-color: #050a0a; /* أسود مائل للأخضر الداكن جداً */
-            --accent-color: #00f5d4; /* أخضر فيروزي مشرق */
-            --secondary-accent: #00bbff; /* أزرق سماوي */
-            --text-color: #ffffff;
-            --glass-bg: rgba(255, 255, 255, 0.03);
         }
 
         body {
@@ -38,13 +101,14 @@
             color: var(--text-color);
             display: flex;
             flex-direction: column;
-            justify-content: space-between;
             align-items: center;
             min-height: 100vh;
             overflow-x: hidden;
+			
         }
- .theme-toggle {
-            position: fixed;
+
+        .theme-toggle {
+            position: static;
             top: 20px;
             right: 20px;
             background: var(--glass-bg);
@@ -64,16 +128,10 @@
             transition: 0.3s;
         }
 
-        .theme-toggle:hover {
-            transform: scale(1.1) rotate(15deg);
-            box-shadow: 0 0 15px var(--accent-color);
-        }
-        /* Artistic Background Elements - Green to Blue Gradient */
         .blob {
             position: absolute;
             width: 700px;
             height: 700px;
-            /* التدرج الفني الجديد من الأخضر للأزرق */
             background: linear-gradient(135deg, #00f5d4 0%, #005f73 50%, #001219 100%);
             filter: blur(120px);
             border-radius: 50%;
@@ -87,7 +145,6 @@
             to { transform: translate(40%, 30%) scale(1.1); }
         }
 
-        /* Main Content Container */
         .container {
             margin-top: 10vh;
             background: var(--glass-bg);
@@ -105,21 +162,55 @@
         h1 {
             font-size: 2.8rem;
             margin-bottom: 0.5rem;
-            letter-spacing: -1px;
-            /* تدرج النص */
             background: linear-gradient(to right, #ffffff, #00f5d4);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
         }
 
-        p {
-            font-weight: 300;
-            color: #88aca9;
-            margin-bottom: 2rem;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-            font-size: 0.8rem;
-        }
+        /* تنسيق نصوص البايو وتغيير الألوان */
+        .bio-text {
+    font-size: 18px;
+    line-height: 1.8;
+    color: #ffffff;
+    text-align: center;
+    max-width: 80%;
+    margin: 0 auto 25px auto;
+    /* التعديل الجديد اللي يحل مشكلة الترتيب */
+    direction: rtl; 
+    unicode-bidi: isolate;
+}
+
+
+        /* تمييز الكلمات مع إضافة تأثيرات الحركة */
+.highlight-classic, .highlight-modern {
+    display: inline-block; /* ضروري لتفعيل تأثير التحريك */
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    cursor: pointer;
+}
+
+.highlight-classic {
+    color: #ffcc00 !important;
+    font-weight: bold;
+}
+
+.highlight-modern {
+    color: #00ffd5 !important;
+    font-weight: bold;
+}
+
+/* تأثيرات الـ Hover */
+.highlight-classic:hover {
+    transform: translateY(-3px) scale(1.1);
+    text-shadow: 0 0 15px rgba(255, 204, 0, 0.8);
+    color: #fff !important; /* يتغير للأبيض ليعطي شكل "فلاش" */
+}
+
+.highlight-modern:hover {
+    transform: translateY(-3px) scale(1.1);
+    text-shadow: 0 0 20px rgba(0, 255, 213, 0.9);
+    color: #fff !important;
+}
+
 
         .links-grid {
             display: flex;
@@ -133,187 +224,170 @@
             background: rgba(255, 255, 255, 0.05);
             padding: 1rem;
             border-radius: 12px;
-            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: 0.4s;
             border: 1px solid rgba(255, 255, 255, 0.1);
-            font-weight: 500;
         }
 
         .btn:hover {
             background: linear-gradient(90deg, #00f5d4, #00bbff);
             color: #001219;
             transform: translateY(-3px);
-            box-shadow: 0 10px 25px rgba(0, 245, 212, 0.3);
-            border-color: transparent;
         }
 
-        /* Automated Artwork Slider */
-        .slider-section {
-            width: 100%;
-            padding: 4rem 0;
-            background: linear-gradient(to bottom, transparent, rgba(0,0,0,0.4));
-            overflow: hidden;
-            position: relative;
-        }
-
-        .slider-title {
-            text-align: center;
-            font-size: 0.7rem;
-            letter-spacing: 5px;
-            color: #4a6d6a;
-            margin-bottom: 1.5rem;
-            text-transform: uppercase;
-        }
-
-        .slider-track {
+        .social-bar {
             display: flex;
-            width: calc(250px * 14); 
-            animation: scroll 40s linear infinite;
+            justify-content: center;
+            gap: 25px;
+            padding: 20px;
         }
 
-        @keyframes scroll {
-            0% { transform: translateX(0); }
-            100% { transform: translateX(calc(-250px * 7)); }
+        .social-icon {
+            font-size: 25px;
+            color: var(--accent-color); /* جعلها متناسقة مع الثيم */
+            transition: all 0.3s ease;
+            text-decoration: none;
         }
 
-        .slide {
-            width: 250px;
-            height: 350px;
-            margin: 0 15px;
-            flex-shrink: 0;
-            border-radius: 20px;
-            overflow: hidden;
-            box-shadow: 0 15px 35px rgba(0,0,0,0.5);
-            border: 1px solid rgba(0, 245, 212, 0.1);
-            transition: all 0.5s;
-        }
+        .instagram:hover { color: #E1306C; transform: translateY(-5px); }
+        .pinterest:hover { color: #E60023; transform: translateY(-5px); }
+        .tiktok:hover { color: #000000; transform: translateY(-5px); }
+/* ثيم اللون الأخضر */
+[data-color="green"] {
+    --accent-color: #00f5d4;
+    --blob-gradient: linear-gradient(135deg, #00f5d4 0%, #005f73 100%);
+}
 
-        .slide:hover {
-            transform: scale(1.05) translateY(-10px);
-            border-color: var(--accent-color);
-        }
+/* ثيم اللون الأحمر/البرتقالي */
+[data-color="red"] {
+    --accent-color: #ff4d4d;
+    --blob-gradient: linear-gradient(135deg, #ff4d4d 0%, #780000 100%);
+}
 
-        .slide img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            filter: grayscale(40%) brightness(70%);
-            transition: 0.5s;
-        }
+/* ثيم اللون الوردي */
+[data-color="pink"] {
+    --accent-color: #ff00ff;
+    --blob-gradient: linear-gradient(135deg, #ff00ff 0%, #700070 100%);
+}
 
-        .slide:hover img {
-            filter: grayscale(0%) brightness(100%);
-        }
+/* ثيم اللون الأزرق */
+[data-color="blue"] {
+    --accent-color: #00bbff;
+    --blob-gradient: linear-gradient(135deg, #00bbff 0%, #001f3f 100%);
+}
 
-        .footer-tag {
-            margin-bottom: 2rem;
-            font-size: 0.7rem;
-            color: #4a6d6a;
-            opacity: 0.6;
-            letter-spacing: 1px;
-       
-.social-bar {
+/* تحديث الـ Blob ليقبل تغيير اللون */
+.blob {
+    background: var(--blob-gradient, linear-gradient(135deg, #00f5d4 0%, #005f73 100%));
+}
+
+.btn:hover {
+    /* التدرج اللوني للزر عند التمرير */
+    background: linear-gradient(90deg, var(--accent-color), var(--secondary-accent));
+    
+    /* تحديد لون النص عند التمرير ليكون واضحاً جداً */
+    color: #001219 !important; /* لون داكن يتناسب مع الخلفية المضيئة للزر */
+    
+    transform: translateY(-3px);
+    box-shadow: 0 10px 25px rgba(0, 245, 212, 0.3);
+    border-color: transparent;
+    font-weight: bold; /* جعل الخط أعرض قليلاً لزيادة الوضوح */
+}
+
+}
+.color-switcher {
+    position: fixed;
+    top: 80px; /* تحت زر اللايت مود */
+    right: 20px;
     display: flex;
-    justify-content: center;
-    gap: 25px; /* المسافة بين الأيقونات */
-    padding: 20px;
+    flex-direction: column;
+    gap: 10px;
+    z-index: 100;
 }
-
-.social-icon {
-    font-size: 35px; /* حجم الأيقونة */
-    color: #333; /* اللون الافتراضي */
-    transition: all 0.3s ease;
+.color-switcher button {
+    width: 25px;
+    height: 25px;
+    border-radius: 50%;
+    border: 2px solid white;
+    cursor: pointer;
+    transition: 0.3s;
 }
+.color-switcher button:hover { transform: scale(1.2); }
 
-/* تأثيرات الألوان عند تمرير الماوس */
-.instagram:hover { color: #E1306C; transform: translateY(-5px); }
-.pinterest:hover { color: #E60023; transform: translateY(-5px); }
-.tiktok:hover { color: #000000; transform: translateY(-5px); }
 
-.social-icon:active {
-    transform: scale(0.9);
-}
-	   }
     </style>
 </head>
 <body>
-<div class="social-bar">
-    <a href="رابط_حسابك" class="social-icon instagram">
-        <i class="fab fa-instagram"></i>
-    </a>
-    <a href="رابط_حسابك" class="social-icon pinterest">
-        <i class="fab fa-pinterest"></i>
-    </a>
-    <a href="رابط_حسابك" class="social-icon tiktok">
-        <i class="fab fa-tiktok"></i>
-    </a>
-</div>
-<div style="text-align: center; padding: 50px;">
-   <i class="fab fa-instagram" style="font-size: 50px; color: red;"></i>
-   <p>إذا لم تظهر أيقونة حمراء هنا، فالمكتبة لم تُحمل بعد</p>
+
+    <button class="theme-toggle" id="themeBtn">🌙</button>
+	<div class="color-switcher">
+    <button onclick="setTheme('blue')" style="background: #00bbff;"></button>
+    <button onclick="setTheme('green')" style="background: #00f5d4;"></button>
+    <button onclick="setTheme('red')" style="background: #ff4d4d;"></button>
+    <button onclick="setTheme('pink')" style="background: #ff00ff;"></button>
 </div>
 
+    <div class="blob"></div>
 
-    <!-- Animated Artistic Blob -->
-    <div class="blob"></div>
-   <button class="theme-toggle" id="themeBtn">🌙</button>
-    <div class="blob"></div>
     <div class="container">
+	<!-- حاوية الشعار -->
+<div class="logo-container">
+    <!-- شعار الوضع الداكن (يظهر في الدارك مود) -->
+    <img src="https://i.postimg.cc/65KGqwDQ/IMG-1999-removebg-preview.png" alt="Logo Dark" class="logo-dark">
+    <!-- شعار الوضع الفاتح (يظهر في اللايت مود) -->
+    <img src="https://i.postimg.cc/J4CjXjHd/IMG-2002-removebg-preview.png" alt="Logo Light" class="logo-light">
+</div>
+
         <h1>bdrspen</h1>
-        <p>Lead Gen • Artist • Strategist</p>
-       
+        
+        <p class="bio-text">
+            من مجرد فكرة إلى تجربة بصرية حقيقية.. حيث يلتقي الخيال بالبُعد الثالث، بعدسة 
+            <span class="highlight-classic">كلاسيكيةٍ</span> ولمسةٍ 
+            <span class="highlight-modern">عصريةٍ</span>.
+        </p>
+
+        <div class="social-bar">
+            <a href="#" class="social-icon instagram"><i class="fab fa-instagram"></i></a>
+            <a href="https://www.pinterest.com/bdrspen/" class="social-icon pinterest"><i class="fab fa-pinterest"></i></a>
+            <a href="#" class="social-icon tiktok"><i class="fab fa-tiktok"></i></a>
+        </div>
+
         <div class="links-grid">
-            <a href="https://www.pinterest.com/bdrspen/" class="btn" target="_blank">pinterest</a>
-            <a href="https://www.instagram.com/bdrspen/" class="btn" target="_blank">Instagram Portfolio</a>
-            <a href="https://www.tiktok.com/@bdrs_pen" class="btn" target="_blank">TikTok Creations</a>
-			<div class="social-bar">
-        <a href="" class="social-icon"><i class="fab fa-instagram"></i></a>
-        <a href="https://www.pinterest.com/bdrspen/" class="social-icon"><i class="fab fa-pinterest"></i></a>
-        <a href="#" class="social-icon"><i class="fab fa-tiktok"></i></a>
+            <a href="https://www.pinterest.com/bdrspen/" class="btn">pinterest</a>
+            <a href="https://www.instagram.com/bdrspen/" class="btn">instagram</a>
+			 <a href="https://www.tiktok.com/@bdrs_pen" class="btn">tiktok</a>
         </div>
     </div>
 
-    <!-- Artwork Slider Section -->
-    <div class="slider-section">
-        <div class="slider-title">Featured Works</div>
-        <div class="slider-track">
-            <!-- الصور ستظهر بشكل أجمل مع الإطار الأخضر الفيروزي الجديد -->
-            <div class="slide"><img src="https://picsum.photos" alt="Art 1"></div>
-            <div class="slide"><img src="https://picsum.photos" alt="Art 2"></div>
-            <div class="slide"><img src="https://picsum.photos" alt="Art 3"></div>
-            <div class="slide"><img src="https://picsum.photos" alt="Art 4"></div>
-            <div class="slide"><img src="https://picsum.photos" alt="Art 5"></div>
-            <div class="slide"><img src="https://picsum.photos" alt="Art 6"></div>
-            <div class="slide"><img src="https://picsum.photos" alt="Art 7"></div>
-           
-            <!-- التكرار لضمان استمرار الحركة -->
-            <div class="slide"><img src="https://www.instagram.com/bdrspen/reel/DUWKLi-DFZ4/" alt="Art 1"></div>
-            <div class="slide"><img src="https://picsum.photos" alt="Art 2"></div>
-            <div class="slide"><img src="https://picsum.photos" alt="Art 3"></div>
-            <div class="slide"><img src="https://picsum.photos" alt="Art 4"></div>
-            <div class="slide"><img src="https://picsum.photos" alt="Art 5"></div>
-            <div class="slide"><img src="https://picsum.photos" alt="Art 6"></div>
-            <div class="slide"><img src="https://picsum.photos" alt="Art 7"></div>
-        </div>
-    </div>
- <script>
+    <script>
         const themeBtn = document.getElementById('themeBtn');
-        const body = document.body;
-
         themeBtn.addEventListener('click', () => {
-            if (body.getAttribute('data-theme') === 'light') {
-                body.removeAttribute('data-theme');
-                themeBtn.innerHTML = '🌙';
-            } else {
-                body.setAttribute('data-theme', 'light');
-                themeBtn.innerHTML = '☀️';
-            }
+            const currentTheme = document.documentElement.getAttribute('data-theme');
+            const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+            document.documentElement.setAttribute('data-theme', newTheme);
+            themeBtn.textContent = newTheme === 'light' ? '☀️' : '🌙';
         });
+		function setTheme(colorName) {
+    // يغير السمة اللونية للموقع بالكامل
+    document.documentElement.setAttribute('data-color', colorName);
+    // اختياري: حفظ خيار المستخدم في المتصفح
+    localStorage.setItem('userColor', colorName);
+}
+
+// تحميل اللون المفضل عند فتح الموقع
+window.onload = () => {
+    const savedColor = localStorage.getItem('userColor') || 'green';
+    setTheme(savedColor);
+};
+
     </script>
-    <div class="footer-tag">
-        bader's p 2026 
-    </div>
+	<!-- الفوتر مع رابط الإيميل -->
+<footer class="footer-tag">
+    <a href="workido997@gmail.com" class="footer-link">
+        bader's p 2026
+    </a>
+</footer>
+
 </body>
 </html>
-
 
 
