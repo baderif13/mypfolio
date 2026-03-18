@@ -3,392 +3,546 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>bdrspen | Creative Portfolio</title>
-    <!-- إضافة مكتبة الأيقونات لتظهر أيقونات السوشيال ميديا -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com">
-    
+    <title>bdrspen | 3D Orbital</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+    <script type="importmap">
+    {
+        "imports": {
+            "three":         "https://cdn.jsdelivr.net/npm/three@0.162.0/build/three.module.js",
+            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.162.0/examples/jsm/"
+        }
+    }
+    </script>
+
     <style>
-	.footer-tag {
-    width: 100%;
-    padding: 20px 0;
-    text-align: center;
-    margin-top: auto; /* يدفعه لأسفل الصفحة دائماً */
-    z-index: 10;
-}
-
-.footer-link {
-    font-size: 0.75rem;
-    color: #4a6d6a; /* لون هادئ كما في الصورة */
-    text-decoration: none;
-    letter-spacing: 2px;
-    text-transform: uppercase;
-    transition: all 0.3s ease;
-    opacity: 0.7;
-}
-
-/* تأثير عند تمرير الماوس */
-.footer-link:hover {
-    color: var(--accent-color); /* يتغير للون التركواز */
-    opacity: 1;
-    letter-spacing: 4px; /* يتوسع قليلاً عند التمرير */
-    text-shadow: 0 0 8px var(--accent-color);
-}
-
-	/* تنسيق حاوية الشعار */
-.logo-container {
-    margin-bottom: 20px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    perspective: 1000px; /* لإعطاء عمق للحركة */
-}
-
-.logo-container img {
-    max-width: 150px;
-    height: auto;
-    cursor: pointer;
-    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-    /* إضافة أنيميشن النبض عند فتح الموقع */
-    animation: logoPulse 3s infinite ease-in-out;
-}
-
-/* تأثير عند مرور الماوس: تكبير مع توهج خفيف */
-.logo-container img:hover {
-    transform: scale(1.1) rotate(2deg);
-    filter: drop-shadow(0 0 10px var(--accent-color));
-}
-
-/* تأثير عند الضغط: تصغير سريع (Feedback) */
-.logo-container img:active {
-    transform: scale(0.9);
-}
-
-/* كود أنيميشن النبض الهادئ */
-@keyframes logoPulse {
-    0% { transform: scale(1); filter: brightness(1); }
-    50% { transform: scale(1.03); filter: brightness(1.1); }
-    100% { transform: scale(1); filter: brightness(1); }
-}
-
-/* التحكم بظهور الشعار حسب الثيم */
-.logo-light { display: none; }
-[data-theme="light"] .logo-light { display: block; }
-[data-theme="light"] .logo-dark { display: none; }
-
-
         :root {
-            --bg-color: #020505;
-            --accent-color: #00f5d4;
-            --text-color: #ffffff;
-            --glass-bg: rgba(255, 255, 255, 0.02);
-            --blob-opacity: 0.15;
-            --secondary-accent: #00bbff;
+            --accent:    #00f5d4;
+            --accent2:   #00bbff;
+            --glass:     rgba(2, 10, 10, 0.52);
+            --icon-size: clamp(58px, 7.5vmin, 84px);
         }
+        [data-color="green"] { --accent:#00f5d4; --accent2:#00bbff; }
+        [data-color="blue"]  { --accent:#00bbff; --accent2:#0066ff; }
+        [data-color="red"]   { --accent:#ff4d4d; --accent2:#ff9900; }
+        [data-color="pink"]  { --accent:#ff00ff; --accent2:#aa00ff; }
 
-        [data-theme="light"] {
-            --bg-color: #fdf5e6;
-            --accent-color: #00a896;
-            --text-color: #3d2b1f;
-            --glass-bg: rgba(2, 0, 0, 0.07);
-            --blob-opacity: 0.3;
-        }
+        *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
 
         body {
-            margin: 0;
-            padding: 0;
+            background: #000;
+            overflow: hidden;
+            height: 100vh;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: var(--bg-color);
-            color: var(--text-color);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            min-height: 100vh;
-            overflow-x: hidden;
-			
+            color: #fff;
+            user-select: none;
         }
 
-        .theme-toggle {
-            position: static;
-            top: 20px;
-            right: 20px;
-            background: var(--glass-bg);
-            border: 1px solid var(--accent-color);
-            color: var(--accent-color);
-            padding: 10px;
+        /* ── Three.js canvas fills screen behind everything ── */
+        #threeCanvas { position:fixed; inset:0; z-index:0; display:block; }
+
+        /* ══════════════════════════════════
+           LOADER
+        ══════════════════════════════════ */
+        #loader {
+            position: fixed; inset: 0;
+            background: #000407;
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            z-index: 1000;
+            transition: opacity 1.2s ease;
+        }
+        #loader.fade { opacity: 0; pointer-events: none; }
+
+        .loader-ring {
+            width: 54px; height: 54px;
+            border: 3px solid rgba(0,245,212,0.1);
+            border-top-color: var(--accent);
             border-radius: 50%;
-            cursor: pointer;
-            z-index: 100;
-            backdrop-filter: blur(10px);
-            width: 45px;
-            height: 45px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.2rem;
-            transition: 0.3s;
+            animation: spin 1s linear infinite;
+        }
+        .loader-label {
+            color: rgba(0,245,212,0.65);
+            font-size: 0.65rem; letter-spacing: 3px;
+            text-transform: uppercase; margin-top: 18px;
+        }
+        .loader-pct {
+            color: var(--accent);
+            font-size: 1.45rem; font-weight: 700; margin-top: 7px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* ══════════════════════════════════
+           LOGO CIRCLE  (top-center)
+        ══════════════════════════════════ */
+        .orbit-logo {
+            position: fixed;
+            left: 50%; top: 13vh;
+            transform: translate(-50%, -50%);
+            width:  calc(var(--icon-size) * 1.55);
+            height: calc(var(--icon-size) * 1.55);
+            border-radius: 50%;
+            background: var(--glass);
+            backdrop-filter: blur(22px);
+            -webkit-backdrop-filter: blur(22px);
+            border: 2px solid var(--accent);
+            box-shadow:
+                0 0 28px rgba(0,245,212,0.35),
+                inset 0 0 20px rgba(0,245,212,0.06);
+            display: flex; align-items: center; justify-content: center;
+            z-index: 20;
+            animation: floatLogo 4s ease-in-out infinite;
+        }
+        .orbit-logo img {
+            width: 62%; height: 62%;
+            object-fit: contain;
+            filter: drop-shadow(0 0 8px var(--accent));
         }
 
-        .blob {
+        @keyframes floatLogo {
+            0%,100% { transform: translate(-50%,-50%) translateY(0px);   }
+            50%      { transform: translate(-50%,-50%) translateY(-10px); }
+        }
+
+        /* ══════════════════════════════════
+           SOCIAL ICON CIRCLES
+        ══════════════════════════════════ */
+        .orbit-icon {
+            position: fixed;
+            transform: translate(-50%, -50%);
+            width:  var(--icon-size);
+            height: var(--icon-size);
+            border-radius: 50%;
+            background: var(--glass);
+            backdrop-filter: blur(18px);
+            -webkit-backdrop-filter: blur(18px);
+            border: 1.5px solid var(--accent);
+            box-shadow: 0 0 20px rgba(0,245,212,0.22);
+            display: flex; align-items: center; justify-content: center;
+            font-size: calc(var(--icon-size) * 0.4);
+            color: var(--accent);
+            text-decoration: none;
+            z-index: 20;
+            transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275),
+                        box-shadow 0.4s ease,
+                        color 0.3s ease,
+                        border-color 0.3s ease,
+                        background 0.3s ease;
+        }
+        /* SVG icons inside circles */
+        .orbit-icon svg { width: 40%; height: 40%; fill: currentColor; }
+
+        /* Individual float rhythms so they never bob in sync */
+        .ic-instagram  { animation: f1 3.8s ease-in-out infinite; }
+        .ic-pinterest  { animation: f2 4.6s ease-in-out infinite; }
+        .ic-tiktok     { animation: f3 3.2s ease-in-out infinite; }
+        .ic-upscrolled { animation: f4 5.1s ease-in-out infinite; }
+
+        @keyframes f1 { 0%,100%{transform:translate(-50%,-50%) translateY(0px)}   50%{transform:translate(-50%,-50%) translateY(-11px)} }
+        @keyframes f2 { 0%,100%{transform:translate(-50%,-50%) translateY(-5px)}  50%{transform:translate(-50%,-50%) translateY( 9px)} }
+        @keyframes f3 { 0%,100%{transform:translate(-50%,-50%) translateY(0px)}   50%{transform:translate(-50%,-50%) translateY(-13px)} }
+        @keyframes f4 { 0%,100%{transform:translate(-50%,-50%) translateY( 7px)}  50%{transform:translate(-50%,-50%) translateY(-7px)}  }
+
+        /* Hover: freeze float, enlarge, brand glow */
+        .orbit-icon:hover {
+            transform: translate(-50%,-50%) scale(1.35) !important;
+            animation-play-state: paused;
+        }
+        .ic-instagram:hover  { color:#E1306C; border-color:#E1306C; box-shadow:0 0 38px #E1306Caa; background:rgba(225,48,108,0.12); }
+        .ic-pinterest:hover  { color:#E60023; border-color:#E60023; box-shadow:0 0 38px #E60023aa; background:rgba(230,0,35,0.12); }
+        .ic-tiktok:hover     { color:#69C9D0; border-color:#69C9D0; box-shadow:0 0 38px #69C9D0aa; background:rgba(105,201,208,0.12); }
+        .ic-upscrolled:hover { color:#8b5cf6; border-color:#8b5cf6; box-shadow:0 0 38px #8b5cf6aa; background:rgba(139,92,246,0.12); }
+
+        /* ── Hover labels ── */
+        .orbit-label {
             position: absolute;
-            width: 700px;
-            height: 700px;
-            background: linear-gradient(135deg, #00f5d4 0%, #005f73 50%, #001219 100%);
-            filter: blur(120px);
+            bottom: calc(100% + 12px);
+            left: 50%;
+            transform: translateX(-50%) translateY(6px);
+            white-space: nowrap;
+            font-size: 0.6rem; font-weight: 700;
+            letter-spacing: 2px; text-transform: uppercase;
+            color: #fff;
+            background: rgba(0,0,0,0.65);
+            backdrop-filter: blur(10px);
+            padding: 5px 12px;
+            border-radius: 20px;
+            border: 1px solid rgba(255,255,255,0.12);
+            opacity: 0; pointer-events: none;
+            transition: opacity 0.3s ease, transform 0.3s ease;
+        }
+        /* Labels on bottom icons flip to appear above icon */
+        .ic-pinterest  .orbit-label,
+        .ic-upscrolled .orbit-label {
+            bottom: auto;
+            top: calc(100% + 12px);
+            transform: translateX(-50%) translateY(-6px);
+        }
+
+        .orbit-icon:hover .orbit-label { opacity: 1; transform: translateX(-50%) translateY(0); }
+        .ic-pinterest:hover  .orbit-label,
+        .ic-upscrolled:hover .orbit-label { transform: translateX(-50%) translateY(0); }
+
+        /* ══════════════════════════════════
+           POSITIONS  (Earth center ≈ 50vw / 50vh)
+           Icons clustered close to the globe edge
+        ══════════════════════════════════ */
+        .orbit-logo    { left: 50vw;  top: 16vh; }
+        .ic-instagram  { left: 28vw;  top: 30vh; }
+        .ic-pinterest  { left: 26vw;  top: 68vh; }
+        .ic-tiktok     { left: 72vw;  top: 28vh; }
+        .ic-upscrolled { left: 74vw;  top: 66vh; }
+
+        /* ══════════════════════════════════
+           COLOR SWITCHER  (bottom-right)
+        ══════════════════════════════════ */
+        .color-switcher {
+            position: fixed; bottom: 55px; right: 18px;
+            display: flex; flex-direction: column;
+            gap: 8px; z-index: 30;
+        }
+        .color-switcher button {
+            width: 22px; height: 22px;
             border-radius: 50%;
-            z-index: -1;
-            animation: move 20s infinite alternate ease-in-out;
-            opacity: 0.6;
+            border: 2px solid rgba(255,255,255,0.25);
+            cursor: pointer; transition: all 0.3s;
+        }
+        .color-switcher button:hover { transform: scale(1.38); border-color:#fff; }
+
+        /* ══════════════════════════════════
+           BOTTOM HINT
+        ══════════════════════════════════ */
+        .hint {
+            position: fixed; bottom: 22px; left: 50%;
+            transform: translateX(-50%);
+            font-size: 0.6rem; letter-spacing: 2.5px;
+            text-transform: uppercase;
+            color: rgba(255,255,255,0.28);
+            white-space: nowrap; z-index: 30;
+            opacity: 0;
+            animation: showHint 1s ease 4s forwards;
+        }
+        @keyframes showHint { to { opacity: 1; } }
+
+        /* ══════════════════════════════════
+           MOBILE — portrait
+        ══════════════════════════════════ */
+        @media (max-width: 600px) {
+            :root { --icon-size: clamp(50px, 14vw, 66px); }
+            .orbit-logo    { top: 8vh; }
+            .ic-instagram  { left: 20vw; top: 27vh; }
+            .ic-pinterest  { left: 17vw; top: 70vh; }
+            .ic-tiktok     { left: 77vw; top: 25vh; }
+            .ic-upscrolled { left: 79vw; top: 68vh; }
         }
 
-        @keyframes move {
-            from { transform: translate(-40%, -20%) scale(1); }
-            to { transform: translate(40%, 30%) scale(1.1); }
+        /* ══════════════════════════════════
+           MOBILE — landscape
+        ══════════════════════════════════ */
+        @media (max-height: 500px) and (orientation: landscape) {
+            :root { --icon-size: clamp(42px, 8vmin, 58px); }
+            .orbit-logo    { top: 10vh; }
+            .ic-instagram  { left: 24vw; top: 22vh; }
+            .ic-pinterest  { left: 22vw; top: 75vh; }
+            .ic-tiktok     { left: 74vw; top: 20vh; }
+            .ic-upscrolled { left: 76vw; top: 73vh; }
         }
-
-        .container {
-            margin-top: 10vh;
-            background: var(--glass-bg);
-            backdrop-filter: blur(25px);
-            border: 1px solid rgba(0, 245, 212, 0.1);
-            padding: 3rem;
-            border-radius: 30px;
-            text-align: center;
-            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.6);
-            width: 90%;
-            max-width: 400px;
-            z-index: 10;
-        }
-
-        h1 {
-            font-size: 2.8rem;
-            margin-bottom: 0.5rem;
-            background: linear-gradient(to right, #ffffff, #00f5d4);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-
-        /* تنسيق نصوص البايو وتغيير الألوان */
-        .bio-text {
-    font-size: 18px;
-    line-height: 1.8;
-    color: #ffffff;
-    text-align: center;
-    max-width: 80%;
-    margin: 0 auto 25px auto;
-    /* التعديل الجديد اللي يحل مشكلة الترتيب */
-    direction: rtl; 
-    unicode-bidi: isolate;
-}
-
-
-        /* تمييز الكلمات مع إضافة تأثيرات الحركة */
-.highlight-classic, .highlight-modern {
-    display: inline-block; /* ضروري لتفعيل تأثير التحريك */
-    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-    cursor: pointer;
-}
-
-.highlight-classic {
-    color: #ffcc00 !important;
-    font-weight: bold;
-}
-
-.highlight-modern {
-    color: #00ffd5 !important;
-    font-weight: bold;
-}
-
-/* تأثيرات الـ Hover */
-.highlight-classic:hover {
-    transform: translateY(-3px) scale(1.1);
-    text-shadow: 0 0 15px rgba(255, 204, 0, 0.8);
-    color: #fff !important; /* يتغير للأبيض ليعطي شكل "فلاش" */
-}
-
-.highlight-modern:hover {
-    transform: translateY(-3px) scale(1.1);
-    text-shadow: 0 0 20px rgba(0, 255, 213, 0.9);
-    color: #fff !important;
-}
-
-
-        .links-grid {
-            display: flex;
-            flex-direction: column;
-            gap: 1rem;
-        }
-
-        .btn {
-            text-decoration: none;
-            color: var(--text-color);
-            background: rgba(255, 255, 255, 0.05);
-            padding: 1rem;
-            border-radius: 12px;
-            transition: 0.4s;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        .btn:hover {
-            background: linear-gradient(90deg, #00f5d4, #00bbff);
-            color: #001219;
-            transform: translateY(-3px);
-        }
-
-        .social-bar {
-            display: flex;
-            justify-content: center;
-            gap: 25px;
-            padding: 20px;
-        }
-
-        .social-icon {
-            font-size: 25px;
-            color: var(--accent-color); /* جعلها متناسقة مع الثيم */
-            transition: all 0.3s ease;
-            text-decoration: none;
-        }
-
-        .instagram:hover { color: #E1306C; transform: translateY(-5px); }
-        .pinterest:hover { color: #E60023; transform: translateY(-5px); }
-        .tiktok:hover { color: #000000; transform: translateY(-5px); }
-/* ثيم اللون الأخضر */
-[data-color="green"] {
-    --accent-color: #00f5d4;
-    --blob-gradient: linear-gradient(135deg, #00f5d4 0%, #005f73 100%);
-}
-
-/* ثيم اللون الأحمر/البرتقالي */
-[data-color="red"] {
-    --accent-color: #ff4d4d;
-    --blob-gradient: linear-gradient(135deg, #ff4d4d 0%, #780000 100%);
-}
-
-/* ثيم اللون الوردي */
-[data-color="pink"] {
-    --accent-color: #ff00ff;
-    --blob-gradient: linear-gradient(135deg, #ff00ff 0%, #700070 100%);
-}
-
-/* ثيم اللون الأزرق */
-[data-color="blue"] {
-    --accent-color: #00bbff;
-    --blob-gradient: linear-gradient(135deg, #00bbff 0%, #001f3f 100%);
-}
-
-/* تحديث الـ Blob ليقبل تغيير اللون */
-.blob {
-    background: var(--blob-gradient, linear-gradient(135deg, #00f5d4 0%, #005f73 100%));
-}
-
-.btn:hover {
-    /* التدرج اللوني للزر عند التمرير */
-    background: linear-gradient(90deg, var(--accent-color), var(--secondary-accent));
-    
-    /* تحديد لون النص عند التمرير ليكون واضحاً جداً */
-    color: #001219 !important; /* لون داكن يتناسب مع الخلفية المضيئة للزر */
-    
-    transform: translateY(-3px);
-    box-shadow: 0 10px 25px rgba(0, 245, 212, 0.3);
-    border-color: transparent;
-    font-weight: bold; /* جعل الخط أعرض قليلاً لزيادة الوضوح */
-}
-
-}
-.color-switcher {
-    position: fixed;
-    top: 80px; /* تحت زر اللايت مود */
-    right: 20px;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    z-index: 100;
-}
-.color-switcher button {
-    width: 25px;
-    height: 25px;
-    border-radius: 50%;
-    border: 2px solid white;
-    cursor: pointer;
-    transition: 0.3s;
-}
-.color-switcher button:hover { transform: scale(1.2); }
-
-
     </style>
 </head>
 <body>
 
-    <button class="theme-toggle" id="themeBtn">🌙</button>
-	<div class="color-switcher">
-    <button onclick="setTheme('blue')" style="background: #00bbff;"></button>
-    <button onclick="setTheme('green')" style="background: #00f5d4;"></button>
-    <button onclick="setTheme('red')" style="background: #ff4d4d;"></button>
-    <button onclick="setTheme('pink')" style="background: #ff00ff;"></button>
-</div>
+    <!-- Three.js background -->
+    <canvas id="threeCanvas"></canvas>
 
-    <div class="blob"></div>
-
-    <div class="container">
-	<!-- حاوية الشعار -->
-<div class="logo-container">
-    <!-- شعار الوضع الداكن (يظهر في الدارك مود) -->
-    <img src="https://i.postimg.cc/65KGqwDQ/IMG-1999-removebg-preview.png" alt="Logo Dark" class="logo-dark">
-    <!-- شعار الوضع الفاتح (يظهر في اللايت مود) -->
-    <img src="https://i.postimg.cc/J4CjXjHd/IMG-2002-removebg-preview.png" alt="Logo Light" class="logo-light">
-</div>
-
-        <h1>bdrspen</h1>
-        
-        <p class="bio-text">
-            من مجرد فكرة إلى تجربة بصرية حقيقية.. حيث يلتقي الخيال بالبُعد الثالث، بعدسة 
-            <span class="highlight-classic">كلاسيكيةٍ</span> ولمسةٍ 
-            <span class="highlight-modern">عصريةٍ</span>.
-        </p>
-
-        <div class="social-bar">
-            <a href="#" class="social-icon instagram"><i class="fab fa-instagram"></i></a>
-            <a href="https://www.pinterest.com/bdrspen/" class="social-icon pinterest"><i class="fab fa-pinterest"></i></a>
-            <a href="#" class="social-icon tiktok"><i class="fab fa-tiktok"></i></a>
-        </div>
-
-        <div class="links-grid">
-            <a href="https://www.pinterest.com/bdrspen/" class="btn">pinterest</a>
-            <a href="https://www.instagram.com/bdrspen/" class="btn">instagram</a>
-			 <a href="https://www.tiktok.com/@bdrs_pen" class="btn">tiktok</a>
-        </div>
+    <!-- Loading screen -->
+    <div id="loader">
+        <div class="loader-ring"></div>
+        <p class="loader-label">Loading</p>
+        <p class="loader-pct" id="loaderPct">0%</p>
     </div>
 
-    <script>
-        const themeBtn = document.getElementById('themeBtn');
-        themeBtn.addEventListener('click', () => {
-            const currentTheme = document.documentElement.getAttribute('data-theme');
-            const newTheme = currentTheme === 'light' ? 'dark' : 'light';
-            document.documentElement.setAttribute('data-theme', newTheme);
-            themeBtn.textContent = newTheme === 'light' ? '☀️' : '🌙';
-        });
-		function setTheme(colorName) {
-    // يغير السمة اللونية للموقع بالكامل
-    document.documentElement.setAttribute('data-color', colorName);
-    // اختياري: حفظ خيار المستخدم في المتصفح
-    localStorage.setItem('userColor', colorName);
-}
+    <!-- ── Logo ── -->
+    <div class="orbit-logo">
+        <img src="https://i.postimg.cc/65KGqwDQ/IMG-1999-removebg-preview.png" alt="bdrspen">
+    </div>
 
-// تحميل اللون المفضل عند فتح الموقع
-window.onload = () => {
-    const savedColor = localStorage.getItem('userColor') || 'green';
-    setTheme(savedColor);
-};
-
-    </script>
-	<!-- الفوتر مع رابط الإيميل -->
-<footer class="footer-tag">
-    <a href="mailto:workido997@gmail.com" class="footer-link">
-        bader's p 2026 contact me here
+    <!-- ── Social icon links ── -->
+    <a href="https://www.instagram.com/bdrspen/"
+       class="orbit-icon ic-instagram" target="_blank" rel="noopener noreferrer">
+        <i class="fab fa-instagram"></i>
+        <span class="orbit-label">Instagram</span>
     </a>
-</footer>
+
+    <a href="https://www.pinterest.com/bdrspen/"
+       class="orbit-icon ic-pinterest" target="_blank" rel="noopener noreferrer">
+        <i class="fab fa-pinterest"></i>
+        <span class="orbit-label">Pinterest</span>
+    </a>
+
+    <a href="https://www.tiktok.com/@bdrs_pen"
+       class="orbit-icon ic-tiktok" target="_blank" rel="noopener noreferrer">
+        <i class="fab fa-tiktok"></i>
+        <span class="orbit-label">TikTok</span>
+    </a>
+
+    <a href="https://share.upscrolled.com/en/user/d0bd7970-3bb1-48e0-9b04-455481b0833a/"
+       class="orbit-icon ic-upscrolled" target="_blank" rel="noopener noreferrer">
+        <svg viewBox="0 0 24 24">
+            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10
+                     10-4.48 10-10S17.52 2 12 2zm0 18c-4.41
+                     0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59
+                     8-8 8zm-1-10.59V16c0 .55.45 1 1 1s1-.45
+                     1-1V9.41l2.29 2.29c.39.39 1.02.39 1.41
+                     0 .39-.39.39-1.02 0-1.41l-4-4c-.39-.39
+                     -1.02-.39-1.41 0l-4 4c-.39.39-.39 1.02
+                     0 1.41.39.39 1.02.39 1.41 0L11 9.41z"/>
+        </svg>
+        <span class="orbit-label">Upscrolled</span>
+    </a>
+
+    <!-- Color switcher -->
+    <div class="color-switcher">
+        <button onclick="setColor('blue')"  style="background:#00bbff" title="Blue"></button>
+        <button onclick="setColor('green')" style="background:#00f5d4" title="Green"></button>
+        <button onclick="setColor('red')"   style="background:#ff4d4d" title="Red"></button>
+        <button onclick="setColor('pink')"  style="background:#ff00ff" title="Pink"></button>
+    </div>
+
+    <!-- Hint -->
+    <p class="hint">drag to rotate &nbsp;·&nbsp; scroll to zoom &nbsp;·&nbsp; pinch on mobile</p>
+
+    <!-- UI logic -->
+    <script>
+        function setColor(n) {
+            document.documentElement.setAttribute('data-color', n);
+            localStorage.setItem('userColor', n);
+        }
+        setColor(localStorage.getItem('userColor') || 'green');
+    </script>
+
+    <!-- ══════════════════════════════════════════════════
+         THREE.JS  —  Earth (or swap with your .glb model)
+    ══════════════════════════════════════════════════ -->
+    <script type="module">
+        import * as THREE        from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        import { GLTFLoader }    from 'three/addons/loaders/GLTFLoader.js';
+
+        /* ─── Renderer ─── */
+        const canvas   = document.getElementById('threeCanvas');
+        const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.toneMapping         = THREE.ACESFilmicToneMapping;
+        renderer.toneMappingExposure = 0.55;
+
+        /* ─── Scene & Camera ─── */
+        const scene  = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(
+            45, window.innerWidth / window.innerHeight, 0.1, 2000
+        );
+        // Portrait screens: pull camera back so Earth fits with room for icons
+        camera.position.z = window.innerWidth < window.innerHeight ? 10 : 7;
+
+        /* ─── Orbit Controls ─── */
+        const controls = new OrbitControls(camera, canvas);
+        controls.enableDamping   = true;
+        controls.dampingFactor   = 0.04;
+        controls.autoRotate      = true;
+        controls.autoRotateSpeed = 0.4;
+        controls.enableZoom      = true;
+        controls.minDistance     = 2.2;
+        controls.maxDistance     = 18;
+        controls.enablePan       = false;
+        controls.touches         = {
+            ONE: THREE.TOUCH.ROTATE,
+            TWO: THREE.TOUCH.DOLLY_ROTATE
+        };
+
+        // Pause auto-rotate while user interacts; resume 3s after release
+        let resumeTimer;
+        controls.addEventListener('start', () => {
+            controls.autoRotate = false;
+            clearTimeout(resumeTimer);
+        });
+        controls.addEventListener('end', () => {
+            resumeTimer = setTimeout(() => { controls.autoRotate = true; }, 3000);
+        });
+
+        /* ─── Stars ─── */
+        (() => {
+            const N   = 5000;
+            const pos = new Float32Array(N * 3);
+            const col = new Float32Array(N * 3);
+            for (let i = 0; i < N; i++) {
+                const r = 600 + Math.random() * 500;
+                const t = Math.random() * Math.PI * 2;
+                const p = Math.acos(2 * Math.random() - 1);
+                pos[i*3]   = r * Math.sin(p) * Math.cos(t);
+                pos[i*3+1] = r * Math.sin(p) * Math.sin(t);
+                pos[i*3+2] = r * Math.cos(p);
+                const w    = Math.random();
+                col[i*3]   = 0.84 + w * 0.16;
+                col[i*3+1] = 0.84 + w * 0.08;
+                col[i*3+2] = 0.90 + (1 - w) * 0.10;
+            }
+            const geo = new THREE.BufferGeometry();
+            geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+            geo.setAttribute('color',    new THREE.BufferAttribute(col, 3));
+            scene.add(new THREE.Points(geo, new THREE.PointsMaterial({
+                size: 0.7, vertexColors: true,
+                transparent: true, opacity: 0.85, sizeAttenuation: true
+            })));
+        })();
+
+        /* ─── Loading Manager ─── */
+        const loaderEl = document.getElementById('loader');
+        const pctEl    = document.getElementById('loaderPct');
+        const manager  = new THREE.LoadingManager(
+            () => {
+                pctEl.textContent = '100%';
+                setTimeout(() => {
+                    loaderEl.classList.add('fade');
+                    setTimeout(() => loaderEl.remove(), 1300);
+                }, 350);
+            },
+            (_, loaded, total) => {
+                pctEl.textContent = Math.round(loaded / total * 100) + '%';
+            },
+            url => console.warn('Load error:', url)
+        );
+        const texLoader = new THREE.TextureLoader(manager);
+
+        /* ══════════════════════════════════════════════════════
+           EARTH GLOBE  ─  demo 3D object
+           ─────────────────────────────────────────────────────
+           Replace this whole section with the GLTF block below
+           once you have your Blender model hosted online.
+        ══════════════════════════════════════════════════════ */
+        const PLANET = 'https://raw.githubusercontent.com/mrdoob/three.js/r160/examples/textures/planets/';
+
+        const earthGroup = new THREE.Group();
+        scene.add(earthGroup);
+
+        let earthMesh = new THREE.Mesh(
+            new THREE.SphereGeometry(1.7, 96, 96),
+            new THREE.MeshPhongMaterial({
+                map:         texLoader.load(PLANET + 'earth_atmos_2048.jpg'),
+                specularMap: texLoader.load(PLANET + 'earth_specular_2048.jpg'),
+                specular:    new THREE.Color(0x1a1a1a),
+                normalMap:   texLoader.load(PLANET + 'earth_normal_2048.jpg'),
+                normalScale: new THREE.Vector2(5, 5),
+                shininess:   14,
+            })
+        );
+        earthGroup.add(earthMesh);
+
+        let cloudMesh = new THREE.Mesh(
+            new THREE.SphereGeometry(1.74, 64, 64),
+            new THREE.MeshPhongMaterial({
+                map:         texLoader.load(PLANET + 'earth_clouds_2048.png'),
+                transparent: true, opacity: 0.38, depthWrite: false,
+            })
+        );
+        earthGroup.add(cloudMesh);
+
+        // Atmosphere glow — inner
+        earthGroup.add(new THREE.Mesh(
+            new THREE.SphereGeometry(1.78, 64, 64),
+            new THREE.MeshPhongMaterial({
+                color: 0x0055cc, transparent: true, opacity: 0.10,
+                side: THREE.BackSide, blending: THREE.AdditiveBlending, depthWrite: false,
+            })
+        ));
+        // Atmosphere glow — outer halo
+        earthGroup.add(new THREE.Mesh(
+            new THREE.SphereGeometry(2.05, 64, 64),
+            new THREE.MeshPhongMaterial({
+                color: 0x0033aa, transparent: true, opacity: 0.04,
+                side: THREE.BackSide, blending: THREE.AdditiveBlending, depthWrite: false,
+            })
+        ));
+
+        /* ══════════════════════════════════════════════════════
+           YOUR BLENDER MODEL
+           ─────────────────────────────────────────────────────
+           Step 1 — Blender: File → Export → glTF 2.0 (.glb)
+           Step 2 — Host the .glb (GitHub raw, Drive, Dropbox…)
+           Step 3 — Comment out EARTH GLOBE section above
+           Step 4 — Uncomment below, paste your URL
+        ══════════════════════════════════════════════════════ */
+        /*
+        const gltfLoader = new GLTFLoader(manager);
+        gltfLoader.load(
+            'PASTE_YOUR_MODEL_URL_HERE.glb',
+            (gltf) => {
+                const model  = gltf.scene;
+                const box    = new THREE.Box3().setFromObject(model);
+                const center = box.getCenter(new THREE.Vector3());
+                const size   = box.getSize(new THREE.Vector3());
+                model.position.sub(center);                     // center at origin
+                model.scale.setScalar(3.4 / Math.max(size.x, size.y, size.z)); // auto-fit
+                scene.add(model);
+            },
+            undefined,
+            err => console.error('GLTF error:', err)
+        );
+        */
+
+        /* ─── Lighting ─── */
+        scene.add(new THREE.AmbientLight(0xffffff, 0.22));
+
+        const sun = new THREE.DirectionalLight(0xfff8e0, 1.6);
+        sun.position.set(-4, 1.5, 2.5);
+        scene.add(sun);
+
+        const fill = new THREE.DirectionalLight(0x88aaff, 0.15);
+        fill.position.set(4, -1, -2);
+        scene.add(fill);
+
+        /* ─── Resize ─── */
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        /* ─── Depth effect refs ─── */
+        const allIcons = [...document.querySelectorAll('.orbit-icon, .orbit-logo')];
+        const MIN_D    = controls.minDistance;   // 2.2
+        const MAX_D    = controls.maxDistance;   // 18
+        const FADE_AT  = 0.62; // t value where fading begins (user is noticeably zoomed in)
+
+        /* ─── Render loop ─── */
+        function animate() {
+            requestAnimationFrame(animate);
+            if (earthMesh) earthMesh.rotation.y += 0.0007;
+            if (cloudMesh) cloudMesh.rotation.y += 0.0010;
+            controls.update();
+
+            // ── Depth illusion: Earth rises in front of icons as user zooms in ──
+            // t = 0 when camera is closest (max zoom), t = 1 when furthest (zoomed out)
+            const dist = controls.getDistance();
+            const t    = Math.max(0, Math.min(1, (dist - MIN_D) / (MAX_D - MIN_D)));
+
+            // Icons stay fully visible while zoomed out; fade + blur as Earth fills screen
+            const opac = t < FADE_AT
+                ? Math.pow(t / FADE_AT, 1.15)   // 0 → 1 across the fade range
+                : 1.0;
+            const blur = t < FADE_AT
+                ? (1 - t / FADE_AT) * 6          // up to 6px depth-of-field blur
+                : 0;
+
+            allIcons.forEach(el => {
+                el.style.opacity       = opac.toFixed(3);
+                el.style.filter        = blur > 0.05 ? `blur(${blur.toFixed(2)}px)` : '';
+                el.style.pointerEvents = opac < 0.12 ? 'none' : 'auto';
+            });
+
+            renderer.render(scene, camera);
+        }
+        animate();
+    </script>
 
 </body>
 </html>
-
-
-
