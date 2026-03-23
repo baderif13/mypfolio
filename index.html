@@ -8,7 +8,7 @@
 <link rel="stylesheet"
   href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
 
-<!-- Polyfill: enables import maps on iOS Safari < 16.4 and older Android -->
+<!-- Polyfill: enables import maps on iOS Safari < 16.4 -->
 <script async src="https://unpkg.com/es-module-shims@1.10.0/dist/es-module-shims.js"></script>
 
 <script type="importmap">
@@ -27,20 +27,20 @@
     background: #000;
     overflow: hidden;
     font-family: 'Segoe UI', system-ui, sans-serif;
-    /* iOS safe-area insets (notch / home indicator) */
-    padding: env(safe-area-inset-top) env(safe-area-inset-right)
+    padding: env(safe-area-inset-top)  env(safe-area-inset-right)
              env(safe-area-inset-bottom) env(safe-area-inset-left);
   }
 
   /*
-    LAYER ORDER (back → front):
-      z:10     #orbit-target  — invisible, catches OrbitControls drag/zoom
-      z:15/21  .icon-wrap     — JS sets 15 (behind model) or 21 (in front) each frame
-      z:20     #c             — Three.js canvas, transparent bg, no pointer events
-      z:21     #arc-svg       — curved bdrspen text, always on top
+    LAYOUT (top → bottom):
+      ① bdrspen arc title  (SVG, z:21, always on top)
+      ② 3-D model          (Three.js canvas, z:20, transparent, no pointer events)
+      ③ social buttons     (fixed bottom row, z:15)
+      — hint overlay       (z:25, center of model area)
+      — orbit-target       (z:10, catches OrbitControls drag)
   */
 
-  /* Three.js canvas — FRONT layer, transparent, no mouse events */
+  /* Three.js canvas — full screen, transparent, passes pointer events through */
   #c {
     position: fixed;
     inset: 0;
@@ -48,7 +48,7 @@
     pointer-events: none;
   }
 
-  /* OrbitControls catch-all div */
+  /* OrbitControls event-capture div */
   #orbit-target {
     position: fixed;
     inset: 0;
@@ -57,7 +57,7 @@
   }
   #orbit-target:active { cursor: grabbing; }
 
-  /* Full-screen SVG for the arc text — sits above canvas so text is never hidden */
+  /* Arc title SVG */
   #arc-svg {
     position: fixed;
     inset: 0;
@@ -68,52 +68,120 @@
     overflow: visible;
   }
 
-  /* Icons — JS sets left/top/transform/opacity each frame */
-  .icon-wrap {
+  /* ── Bottom button row ──────────────────────────── */
+  #btn-track {
     position: fixed;
+    bottom: 11%;
+    left: 0;
+    right: 0;
     z-index: 15;
+    /* scrollable on very small screens */
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+  }
+  #btn-track::-webkit-scrollbar { display: none; }
+
+  #btn-row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 22px;
+    padding: 0 24px;
+    width: max-content;
+    min-width: 100%;
+  }
+
+  .btn-item {
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: 8px;
     text-decoration: none;
-    transform: translate(-50%, -50%);
-    will-change: transform, opacity;
-    cursor: grab;
-    user-select: none;
-    -webkit-user-select: none;
+    scroll-snap-align: center;
+    flex-shrink: 0;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
   }
-  .icon-wrap:active { cursor: grabbing; }
 
-  .icon-bubble {
-    width: 60px;
-    height: 60px;
+  .btn-circle {
+    width: 64px;
+    height: 64px;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
     font-size: 24px;
-    color: #eee;
+    color: #ddd;
     background: rgba(255,255,255,0.07);
-    border: 1.5px solid rgba(255,255,255,0.18);
-    backdrop-filter: blur(8px);
-    transition: background .22s, box-shadow .22s;
+    border: 1.5px solid rgba(255,255,255,0.16);
+    backdrop-filter: blur(10px);
+    transition: background .22s, box-shadow .22s, transform .18s;
   }
-  .icon-wrap:hover .icon-bubble {
+  .btn-item:hover  .btn-circle,
+  .btn-item:active .btn-circle {
     background: rgba(255,255,255,0.15);
-    box-shadow: 0 4px 22px rgba(255,255,255,0.12);
+    box-shadow: 0 0 22px rgba(255,255,255,0.12);
+    transform: scale(1.08);
   }
 
-  .icon-label {
+  .btn-label {
     font-size: 10px;
     letter-spacing: .12em;
     text-transform: uppercase;
-    color: rgba(255,255,255,0.5);
+    color: rgba(255,255,255,0.45);
     transition: color .22s;
   }
-  .icon-wrap:hover .icon-label { color: #fff; }
+  .btn-item:hover .btn-label { color: rgba(255,255,255,0.8); }
 
-  /* Loading screen */
+  /* ── Hint overlay (no frame, just text + icons) ── */
+  #hint {
+    position: fixed;
+    left: 50%;
+    top: 44%;
+    transform: translate(-50%, -50%) translateY(14px);
+    z-index: 25;
+    pointer-events: none;
+    text-align: center;
+    opacity: 0;
+    transition: opacity .5s ease, transform .5s ease;
+  }
+  #hint.show {
+    opacity: 1;
+    transform: translate(-50%, -50%) translateY(0);
+  }
+
+  .hint-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 9px;
+    margin: 5px 0;
+  }
+  .hint-row i   { color: rgba(255,255,255,.55); font-size: 13px; }
+  .hint-row span {
+    font-size: 11px;
+    letter-spacing: .13em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,.42);
+  }
+
+  /* animated hand (slide hint) */
+  .h-hand { animation: h-swipe 1.3s ease-in-out infinite; }
+  @keyframes h-swipe {
+    0%,100% { transform: translateX(-8px); opacity:.45; }
+    50%     { transform: translateX( 8px); opacity:1;   }
+  }
+  /* spinning rotate (model hint) */
+  .h-spin { animation: h-rotate 2s linear infinite; }
+  @keyframes h-rotate {
+    from { transform: rotate(0deg); }
+    to   { transform: rotate(360deg); }
+  }
+
+  /* ── Loading screen ── */
   #loading {
     position: fixed;
     inset: 0;
@@ -130,8 +198,8 @@
 
   .loading-ring {
     width: 44px; height: 44px;
-    border: 3px solid rgba(255,255,255,.1);
-    border-top-color: rgba(255,255,255,.7);
+    border: 3px solid rgba(255,255,255,.08);
+    border-top-color: rgba(255,255,255,.65);
     border-radius: 50%;
     animation: spin 1s linear infinite;
   }
@@ -141,69 +209,109 @@
     font-size: 12px;
     letter-spacing: .22em;
     text-transform: uppercase;
-    color: rgba(255,255,255,.4);
+    color: rgba(255,255,255,.38);
   }
 
-  /* iOS phone (≤ 430px wide, portrait) */
+  /* ── Footer ── */
+  #footer {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 15;
+    text-align: center;
+    padding: 10px 0 calc(10px + env(safe-area-inset-bottom));
+  }
+
+  #footer a {
+    font-size: 11px;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,.3);
+    text-decoration: none;
+    transition: color .25s;
+  }
+  #footer a:hover { color: rgba(255,255,255,.75); }
+
   @media (max-width: 430px) {
-    .icon-bubble { width: 50px; height: 50px; font-size: 19px; }
-    .icon-label  { font-size: 8px; letter-spacing: .08em; }
+    .btn-circle { width: 54px; height: 54px; font-size: 20px; }
+    .btn-label  { font-size: 8px; }
+    #btn-row    { gap: 16px; }
   }
 </style>
 </head>
 <body>
 
+<!-- Loading -->
 <div id="loading">
   <div class="loading-ring"></div>
   <span class="loading-text">loading</span>
 </div>
 
-<!-- Layer 3: Three.js (transparent, on top) -->
+<!-- Three.js canvas (model, transparent, top layer) -->
 <canvas id="c"></canvas>
 
-<!-- Layer 1: OrbitControls event target -->
+<!-- OrbitControls catch div -->
 <div id="orbit-target"></div>
 
-<!-- Layer 2b: Curved text (SVG) -->
+<!-- ① Arc title (SVG textPath) -->
 <svg id="arc-svg" aria-hidden="true">
-  <defs>
-    <path id="arc-path" d="" fill="none"/>
-  </defs>
+  <defs><path id="arc-path" d="" fill="none"/></defs>
   <text id="arc-text-el" text-anchor="middle" dominant-baseline="auto">
-    <textPath id="arc-tp" href="#arc-path" startOffset="50%">
+    <textPath href="#arc-path" startOffset="50%">
       <tspan id="typing-text"></tspan>
     </textPath>
   </text>
 </svg>
 
-<!-- Layer 2: Social icons (orbiting) -->
-<a class="icon-wrap" id="icon-ig"
-   href="https://www.instagram.com/bdrspen"
-   target="_blank" rel="noopener" aria-label="Instagram">
-  <div class="icon-bubble"><i class="fab fa-instagram"></i></div>
-  <span class="icon-label">Instagram</span>
-</a>
+<!-- ③ Social buttons — horizontal row below model -->
+<div id="btn-track">
+  <div id="btn-row">
 
-<a class="icon-wrap" id="icon-pi"
-   href="https://www.pinterest.com/bdrspen"
-   target="_blank" rel="noopener" aria-label="Pinterest">
-  <div class="icon-bubble"><i class="fab fa-pinterest"></i></div>
-  <span class="icon-label">Pinterest</span>
-</a>
+    <a class="btn-item" href="https://www.instagram.com/bdrspen"
+       target="_blank" rel="noopener" aria-label="Instagram">
+      <div class="btn-circle"><i class="fab fa-instagram"></i></div>
+      <span class="btn-label">Instagram</span>
+    </a>
 
-<a class="icon-wrap" id="icon-tt"
-   href="https://www.tiktok.com/@bdrspen"
-   target="_blank" rel="noopener" aria-label="TikTok">
-  <div class="icon-bubble"><i class="fab fa-tiktok"></i></div>
-  <span class="icon-label">TikTok</span>
-</a>
+    <a class="btn-item" href="https://www.pinterest.com/bdrspen"
+       target="_blank" rel="noopener" aria-label="Pinterest">
+      <div class="btn-circle"><i class="fab fa-pinterest"></i></div>
+      <span class="btn-label">Pinterest</span>
+    </a>
 
-<a class="icon-wrap" id="icon-up"
-   href="https://upscrolled.com/bdrspen"
-   target="_blank" rel="noopener" aria-label="Upscrolled">
-  <div class="icon-bubble"><i class="fa-solid fa-scroll"></i></div>
-  <span class="icon-label">Upscrolled</span>
-</a>
+    <a class="btn-item" href="https://www.tiktok.com/@bdrspen"
+       target="_blank" rel="noopener" aria-label="TikTok">
+      <div class="btn-circle"><i class="fab fa-tiktok"></i></div>
+      <span class="btn-label">TikTok</span>
+    </a>
+
+    <a class="btn-item" href="https://upscrolled.com/bdrspen"
+       target="_blank" rel="noopener" aria-label="Upscrolled">
+      <div class="btn-circle"><i class="fa-solid fa-scroll"></i></div>
+      <span class="btn-label">Upscrolled</span>
+    </a>
+
+  </div>
+</div>
+
+<!-- Footer -->
+<footer id="footer">
+  <a href="mailto:workido997@gmail.com">contact me here</a>
+</footer>
+
+<!-- Hint overlay — both lines together, no frame, over the model -->
+<div id="hint" role="status" aria-live="polite">
+  <div class="hint-row">
+    <i class="fa-solid fa-hand-pointer h-hand"></i>
+    <span>slide buttons</span>
+    <i class="fa-solid fa-hand-pointer h-hand" style="transform:scaleX(-1)"></i>
+  </div>
+  <div class="hint-row">
+    <i class="fa-solid fa-arrows-rotate h-spin"></i>
+    <span>drag to explore model</span>
+  </div>
+</div>
 
 <script type="module">
 import * as THREE          from 'three';
@@ -211,7 +319,7 @@ import { OrbitControls }   from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader }      from 'three/addons/loaders/GLTFLoader.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 
-// ── Renderer (transparent → white body shows through) ─────
+// ── Renderer (transparent canvas) ─────────────────────────
 const canvas   = document.getElementById('c');
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
@@ -222,36 +330,32 @@ renderer.outputColorSpace    = THREE.SRGBColorSpace;
 
 // ── Scene ─────────────────────────────────────────────────
 const scene = new THREE.Scene();
-// no scene.background — stays transparent
 
 const pmrem = new THREE.PMREMGenerator(renderer);
 scene.environment = pmrem.fromScene(new RoomEnvironment()).texture;
 pmrem.dispose();
 
-// Very dim ambient — just enough so the dark side isn't pure void on black
 scene.add(new THREE.AmbientLight(0xffffff, 0.12));
 
 // ── Camera ────────────────────────────────────────────────
 const camera = new THREE.PerspectiveCamera(45, innerWidth / innerHeight, 0.1, 1000);
 camera.position.set(0, 0, 7);
 
-// ── OrbitControls on the invisible catch div ──────────────
+// ── OrbitControls ─────────────────────────────────────────
 const controls = new OrbitControls(camera, document.getElementById('orbit-target'));
 controls.enableDamping   = true;
 controls.dampingFactor   = 0.08;
 controls.minDistance     = 2;
 controls.maxDistance     = 14;
-controls.autoRotate      = false; // user controls camera freely
+controls.autoRotate      = false;
 
 // ── Animation mixer ───────────────────────────────────────
 const clock = new THREE.Clock();
 let   mixer = null;
 
-// ── Load Blender model ────────────────────────────────────
+// ── Load model ────────────────────────────────────────────
 const loadingEl   = document.getElementById('loading');
 const loadingText = loadingEl.querySelector('.loading-text');
-
-// Safety net — hide loading screen after 15 s even if model never arrives
 const safetyTimer = setTimeout(() => loadingEl.classList.add('hidden'), 15000);
 
 const manager  = new THREE.LoadingManager();
@@ -267,7 +371,9 @@ new GLTFLoader(manager).load(
     model.position.sub(center);
     model.scale.setScalar(3.4 / Math.max(size.x, size.y, size.z));
 
-    // Boost Blender emission
+    // Shift model up slightly so it sits between title and buttons
+    model.position.y += 0.18;
+
     model.traverse(child => {
       if (!child.isMesh) return;
       const mats = Array.isArray(child.material) ? child.material : [child.material];
@@ -281,12 +387,11 @@ new GLTFLoader(manager).load(
 
     if (animations && animations.length > 0) {
       mixer = new THREE.AnimationMixer(model);
-      mixer.timeScale = 0.35; // slow-motion: 35% of original speed
+      mixer.timeScale = 0.35;
       animations.forEach(clip => mixer.clipAction(clip).play());
     }
   },
   xhr => {
-    // Show live download progress so user knows something is happening
     if (xhr.lengthComputable) {
       const pct = Math.round(xhr.loaded / xhr.total * 100);
       loadingText.textContent = `loading ${pct}%`;
@@ -299,172 +404,7 @@ new GLTFLoader(manager).load(
   }
 );
 
-// ────────────────────────────────────────────────────────────
-// ICON ORBIT  (elliptical ring — flat circle viewed at angle)
-// x = cx + R · cos(θ)
-// y = cy + R · sin(θ) · FLAT   (FLAT < 1 gives 3-D ring look)
-// ────────────────────────────────────────────────────────────
-const FLAT = 0.36;            // vertical squish (tilt illusion)
-
-const iconEls = [
-  document.getElementById('icon-ig'),
-  document.getElementById('icon-pi'),
-  document.getElementById('icon-tt'),
-  document.getElementById('icon-up'),
-];
-const N = iconEls.length;
-
-let orbitAngle   = Math.PI * 0.6; // initial spread
-let ringVelocity = 0;             // momentum after user releases drag
-const FRICTION   = 0.91;          // velocity decay per frame
-
-function getR() {
-  // On portrait phones innerWidth is the short side — use it directly.
-  // On landscape / desktop use the smaller dimension.
-  // Cap so icons never push off-screen on very narrow viewports.
-  return Math.min(innerWidth * 0.38, innerHeight * 0.29, 260);
-}
-
-function updateIcons() {
-  const cx   = innerWidth  / 2;
-  const cy   = innerHeight / 2;
-  const R    = getR();
-  const Ry   = R * FLAT;
-
-  // Camera-zoom depth factor (icons shrink/fade when zooming into model)
-  const dist  = controls.getDistance();
-  const zoomT = Math.max(0, Math.min(1, (7 - dist) / 5));
-
-  iconEls.forEach((el, i) => {
-    const θ = orbitAngle + (i * Math.PI * 2 / N);
-    const x = cx + R  * Math.cos(θ);
-    const y = cy + Ry * Math.sin(θ);
-
-    // Depth: sin(θ) = +1 → bottom (front, closest), -1 → top (back, furthest)
-    const depth   = (Math.sin(θ) + 1) / 2;   // 0 = back, 1 = front
-    const scale   = (0.62 + 0.38 * depth) * (1 - zoomT * 0.45);
-    const opacity = (0.38 + 0.62 * depth) * (1 - zoomT * 0.85);
-
-    // Front half of orbit: sit above canvas (z:21) so icons pass IN FRONT of model.
-    // Back half: sit below canvas (z:15) so model covers them.
-    el.style.zIndex    = depth > 0.5 ? '21' : '15';
-    el.style.left      = x + 'px';
-    el.style.top       = y + 'px';
-    el.style.transform = `translate(-50%,-50%) scale(${scale.toFixed(3)})`;
-    el.style.opacity   = opacity.toFixed(3);
-  });
-
-  // Apply momentum when not actively dragging
-  if (!ringDrag.active) {
-    ringVelocity *= FRICTION;
-    orbitAngle   += ringVelocity;
-  }
-}
-
-// ────────────────────────────────────────────────────────────
-// DRAG-TO-SPIN — horizontal drag rotates the icon ring
-// Drag from any icon OR from empty background space.
-// Vertical drag → OrbitControls (camera). Horizontal → ring.
-// ────────────────────────────────────────────────────────────
-const ringDrag = {
-  active:   false,
-  startX:   0,
-  startY:   0,
-  lastX:    0,
-  isHoriz:  null,   // null=undecided, true=ring, false=camera
-  hasMoved: false,
-};
-
-function onDragStart(e, fromIcon) {
-  ringDrag.startX   = ringDrag.lastX = e.clientX;
-  ringDrag.startY   = e.clientY;
-  ringDrag.isHoriz  = fromIcon ? true : null;
-  ringDrag.active   = fromIcon;
-  ringDrag.hasMoved = false;
-  ringVelocity      = 0;
-  if (fromIcon) {
-    e.stopPropagation();
-    if (e.target.setPointerCapture) e.target.setPointerCapture(e.pointerId);
-  }
-}
-
-// Drag starting on any icon
-iconEls.forEach(el => {
-  el.addEventListener('pointerdown', e => onDragStart(e, true));
-  el.addEventListener('click', e => { if (ringDrag.hasMoved) e.preventDefault(); });
-});
-
-// Drag starting on background (orbit-target)
-document.getElementById('orbit-target')
-  .addEventListener('pointerdown', e => onDragStart(e, false));
-
-document.addEventListener('pointermove', e => {
-  const dx = e.clientX - ringDrag.startX;
-  const dy = e.clientY - ringDrag.startY;
-
-  // Determine axis on first meaningful movement
-  if (ringDrag.isHoriz === null && (Math.abs(dx) > 6 || Math.abs(dy) > 6)) {
-    ringDrag.isHoriz = Math.abs(dx) >= Math.abs(dy);
-    if (ringDrag.isHoriz) {
-      ringDrag.active       = true;
-      controls.enableRotate = false; // suppress camera yaw while spinning ring
-    }
-  }
-
-  if (!ringDrag.active) return;
-
-  const ddx = e.clientX - ringDrag.lastX;
-  if (Math.abs(ddx) > 2) ringDrag.hasMoved = true;
-
-  // Half-screen width drag ≈ one full revolution
-  ringVelocity  = ddx / innerWidth * Math.PI * 2.8;
-  orbitAngle   += ringVelocity;
-  ringDrag.lastX = e.clientX;
-});
-
-document.addEventListener('pointerup', () => {
-  ringDrag.active  = false;
-  ringDrag.isHoriz = null;
-  controls.enableRotate = true;
-  // ringVelocity carries momentum in updateIcons()
-});
-
-// ────────────────────────────────────────────────────────────
-// ARC TEXT  — SVG textPath following the top of the orbit ring
-// ────────────────────────────────────────────────────────────
-const arcPathEl = document.getElementById('arc-path');
-const arcTextEl = document.getElementById('arc-text-el');
-const typingEl  = document.getElementById('typing-text');
-
-function updateArcPath() {
-  const cx = innerWidth  / 2;
-  const cy = innerHeight / 2;
-  const R  = getR();
-
-  // Pure circle (not flattened) for maximum visible curvature.
-  // Sweeps -162° → -18°  (144° arc) — a wide, clearly curved half-circle at the top.
-  const a1 = -162 * Math.PI / 180;
-  const a2 =  -18 * Math.PI / 180;
-
-  const x1 = cx + R * Math.cos(a1);
-  const y1 = cy + R * Math.sin(a1);
-  const x2 = cx + R * Math.cos(a2);
-  const y2 = cy + R * Math.sin(a2);
-
-  // rx=R, ry=R → perfect circle arc, sweep=1 (clockwise, left→top→right)
-  arcPathEl.setAttribute('d', `M ${x1} ${y1} A ${R} ${R} 0 0 1 ${x2} ${y2}`);
-
-  // Responsive font size
-  const fs = Math.max(13, Math.min(19, innerWidth * 0.016));
-  const ls = Math.max(7,  Math.min(13, innerWidth * 0.011));
-  arcTextEl.setAttribute('font-size',      fs);
-  arcTextEl.setAttribute('letter-spacing', ls);
-  arcTextEl.setAttribute('fill',          '#ffffff');
-  arcTextEl.setAttribute('font-family',   "'Segoe UI', system-ui, sans-serif");
-  arcTextEl.setAttribute('font-weight',   '700');
-}
-updateArcPath();
-
+// ── Resize ────────────────────────────────────────────────
 window.addEventListener('resize', () => {
   camera.aspect = innerWidth / innerHeight;
   camera.updateProjectionMatrix();
@@ -473,18 +413,53 @@ window.addEventListener('resize', () => {
 });
 
 // ────────────────────────────────────────────────────────────
+// ARC TITLE  — bdrspen curves over the top of the model
+// ────────────────────────────────────────────────────────────
+const arcPathEl = document.getElementById('arc-path');
+const arcTextEl = document.getElementById('arc-text-el');
+const typingEl  = document.getElementById('typing-text');
+
+function getR() {
+  // radius that sits just above the model's top edge
+  return Math.min(innerWidth * 0.38, innerHeight * 0.27, 250);
+}
+
+function updateArcPath() {
+  const cx = innerWidth  / 2;
+  const cy = innerHeight / 2;
+  const R  = getR();
+
+  // Pure circle arc, -162° → -18° (144° sweep = strong half-circle curve)
+  const a1 = -162 * Math.PI / 180;
+  const a2 =  -18 * Math.PI / 180;
+  const x1 = cx + R * Math.cos(a1);
+  const y1 = cy + R * Math.sin(a1);
+  const x2 = cx + R * Math.cos(a2);
+  const y2 = cy + R * Math.sin(a2);
+
+  arcPathEl.setAttribute('d', `M ${x1} ${y1} A ${R} ${R} 0 0 1 ${x2} ${y2}`);
+
+  const fs = Math.max(13, Math.min(19, innerWidth * 0.016));
+  const ls = Math.max(7,  Math.min(13, innerWidth * 0.011));
+  arcTextEl.setAttribute('font-size',      fs);
+  arcTextEl.setAttribute('letter-spacing', ls);
+  arcTextEl.setAttribute('fill',           '#ffffff');
+  arcTextEl.setAttribute('font-family',    "'Segoe UI', system-ui, sans-serif");
+  arcTextEl.setAttribute('font-weight',    '700');
+}
+updateArcPath();
+
+// ────────────────────────────────────────────────────────────
 // TYPEWRITER on the arc
 // ────────────────────────────────────────────────────────────
-const WORD  = 'bdrspen';
+const WORD   = 'bdrspen';
 let charIdx  = 0;
 let erasing  = false;
 let cursorOn = true;
 
-// Blinking cursor (toggle independently)
 setInterval(() => { cursorOn = !cursorOn; redraw(); }, 530);
 
 function redraw() {
-  // Space placeholder keeps arc path visible even when cursor is off
   typingEl.textContent = WORD.slice(0, charIdx) + (cursorOn ? '|' : '\u00a0');
 }
 
@@ -493,7 +468,6 @@ function tick() {
     charIdx++;
     redraw();
     if (charIdx >= WORD.length) {
-      // Fully typed — hold, then erase
       setTimeout(() => { erasing = true; tick(); }, 2100);
       return;
     }
@@ -510,7 +484,32 @@ function tick() {
     setTimeout(tick, 72);
   }
 }
-setTimeout(tick, 700); // slight delay before first letter
+setTimeout(tick, 700);
+
+// ────────────────────────────────────────────────────────────
+// TUTORIAL HINT  — both lines together, no frame, over model
+// Shows every 7 s, dismissed on first interaction
+// ────────────────────────────────────────────────────────────
+const hintEl   = document.getElementById('hint');
+let dismissed  = false;
+let hintTimer  = null;
+
+function showHint() {
+  if (dismissed) return;
+  hintEl.classList.add('show');
+  setTimeout(() => {
+    hintEl.classList.remove('show');
+    if (!dismissed) hintTimer = setTimeout(showHint, 7000);
+  }, 3500);
+}
+
+hintTimer = setTimeout(showHint, 2200);
+
+document.addEventListener('pointerdown', () => {
+  dismissed = true;
+  clearTimeout(hintTimer);
+  hintEl.classList.remove('show');
+}, { once: true });
 
 // ── Render loop ───────────────────────────────────────────
 (function animate() {
@@ -518,7 +517,6 @@ setTimeout(tick, 700); // slight delay before first letter
   const delta = clock.getDelta();
   if (mixer) mixer.update(delta);
   controls.update();
-  updateIcons();
   renderer.render(scene, camera);
 })();
 </script>
