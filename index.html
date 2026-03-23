@@ -8,6 +8,9 @@
 <link rel="stylesheet"
   href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
 
+<!-- Polyfill: enables import maps on iOS Safari < 16.4 and older Android -->
+<script async src="https://unpkg.com/es-module-shims@1.10.0/dist/es-module-shims.js"></script>
+
 <script type="importmap">
 {
   "imports": {
@@ -245,9 +248,14 @@ const clock = new THREE.Clock();
 let   mixer = null;
 
 // ── Load Blender model ────────────────────────────────────
-const loadingEl = document.getElementById('loading');
-const manager   = new THREE.LoadingManager();
-manager.onLoad  = () => loadingEl.classList.add('hidden');
+const loadingEl   = document.getElementById('loading');
+const loadingText = loadingEl.querySelector('.loading-text');
+
+// Safety net — hide loading screen after 15 s even if model never arrives
+const safetyTimer = setTimeout(() => loadingEl.classList.add('hidden'), 15000);
+
+const manager  = new THREE.LoadingManager();
+manager.onLoad = () => { clearTimeout(safetyTimer); loadingEl.classList.add('hidden'); };
 
 new GLTFLoader(manager).load(
   'https://raw.githubusercontent.com/lokanoka/bdrspen-assets/refs/heads/main/bdrspen-model.glb',
@@ -277,10 +285,16 @@ new GLTFLoader(manager).load(
       animations.forEach(clip => mixer.clipAction(clip).play());
     }
   },
-  undefined,
+  xhr => {
+    // Show live download progress so user knows something is happening
+    if (xhr.lengthComputable) {
+      const pct = Math.round(xhr.loaded / xhr.total * 100);
+      loadingText.textContent = `loading ${pct}%`;
+    }
+  },
   err => {
     console.error(err);
-    document.querySelector('.loading-text').textContent = 'model unavailable';
+    loadingText.textContent = 'model unavailable';
     setTimeout(() => loadingEl.classList.add('hidden'), 2000);
   }
 );
