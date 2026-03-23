@@ -1,548 +1,513 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>bdrspen | 3D Orbital</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>bdrspen</title>
 
-    <script type="importmap">
-    {
-        "imports": {
-            "three":         "https://cdn.jsdelivr.net/npm/three@0.162.0/build/three.module.js",
-            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.162.0/examples/jsm/"
-        }
-    }
-    </script>
+<link rel="stylesheet"
+  href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
 
-    <style>
-        :root {
-            --accent:    #00f5d4;
-            --accent2:   #00bbff;
-            --glass:     rgba(2, 10, 10, 0.52);
-            --icon-size: clamp(58px, 7.5vmin, 84px);
-        }
-        [data-color="green"] { --accent:#00f5d4; --accent2:#00bbff; }
-        [data-color="blue"]  { --accent:#00bbff; --accent2:#0066ff; }
-        [data-color="red"]   { --accent:#ff4d4d; --accent2:#ff9900; }
-        [data-color="pink"]  { --accent:#ff00ff; --accent2:#aa00ff; }
+<script type="importmap">
+{
+  "imports": {
+    "three":         "https://cdn.jsdelivr.net/npm/three@0.163.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.163.0/examples/jsm/"
+  }
+}
+</script>
 
-        *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-        body {
-            background: #000;
-            overflow: hidden;
-            height: 100vh;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            color: #fff;
-            user-select: none;
-        }
+  body {
+    background: #000;
+    overflow: hidden;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    /* iOS safe-area insets (notch / home indicator) */
+    padding: env(safe-area-inset-top) env(safe-area-inset-right)
+             env(safe-area-inset-bottom) env(safe-area-inset-left);
+  }
 
-        /* ── Three.js canvas fills screen behind everything ── */
-        #threeCanvas { position:fixed; inset:0; z-index:0; display:block; }
+  /*
+    LAYER ORDER (back → front):
+      z:10     #orbit-target  — invisible, catches OrbitControls drag/zoom
+      z:15/21  .icon-wrap     — JS sets 15 (behind model) or 21 (in front) each frame
+      z:20     #c             — Three.js canvas, transparent bg, no pointer events
+      z:21     #arc-svg       — curved bdrspen text, always on top
+  */
 
-        /* ══════════════════════════════════
-           LOADER
-        ══════════════════════════════════ */
-        #loader {
-            position: fixed; inset: 0;
-            background: #000407;
-            display: flex; flex-direction: column;
-            align-items: center; justify-content: center;
-            z-index: 1000;
-            transition: opacity 1.2s ease;
-        }
-        #loader.fade { opacity: 0; pointer-events: none; }
+  /* Three.js canvas — FRONT layer, transparent, no mouse events */
+  #c {
+    position: fixed;
+    inset: 0;
+    z-index: 20;
+    pointer-events: none;
+  }
 
-        .loader-ring {
-            width: 54px; height: 54px;
-            border: 3px solid rgba(0,245,212,0.1);
-            border-top-color: var(--accent);
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-        }
-        .loader-label {
-            color: rgba(0,245,212,0.65);
-            font-size: 0.65rem; letter-spacing: 3px;
-            text-transform: uppercase; margin-top: 18px;
-        }
-        .loader-pct {
-            color: var(--accent);
-            font-size: 1.45rem; font-weight: 700; margin-top: 7px;
-        }
-        @keyframes spin { to { transform: rotate(360deg); } }
+  /* OrbitControls catch-all div */
+  #orbit-target {
+    position: fixed;
+    inset: 0;
+    z-index: 10;
+    cursor: grab;
+  }
+  #orbit-target:active { cursor: grabbing; }
 
-        /* ══════════════════════════════════
-           LOGO CIRCLE  (top-center)
-        ══════════════════════════════════ */
-        .orbit-logo {
-            position: fixed;
-            left: 50%; top: 13vh;
-            transform: translate(-50%, -50%);
-            width:  calc(var(--icon-size) * 1.55);
-            height: calc(var(--icon-size) * 1.55);
-            border-radius: 50%;
-            background: var(--glass);
-            backdrop-filter: blur(22px);
-            -webkit-backdrop-filter: blur(22px);
-            border: 2px solid var(--accent);
-            box-shadow:
-                0 0 28px rgba(0,245,212,0.35),
-                inset 0 0 20px rgba(0,245,212,0.06);
-            display: flex; align-items: center; justify-content: center;
-            z-index: 20;
-            animation: floatLogo 4s ease-in-out infinite;
-        }
-        .orbit-logo img {
-            width: 62%; height: 62%;
-            object-fit: contain;
-            filter: drop-shadow(0 0 8px var(--accent));
-        }
+  /* Full-screen SVG for the arc text — sits above canvas so text is never hidden */
+  #arc-svg {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 21;
+    pointer-events: none;
+    overflow: visible;
+  }
 
-        @keyframes floatLogo {
-            0%,100% { transform: translate(-50%,-50%) translateY(0px);   }
-            50%      { transform: translate(-50%,-50%) translateY(-10px); }
-        }
+  /* Icons — JS sets left/top/transform/opacity each frame */
+  .icon-wrap {
+    position: fixed;
+    z-index: 15;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    text-decoration: none;
+    transform: translate(-50%, -50%);
+    will-change: transform, opacity;
+    cursor: grab;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  .icon-wrap:active { cursor: grabbing; }
 
-        /* ══════════════════════════════════
-           SOCIAL ICON CIRCLES
-        ══════════════════════════════════ */
-        .orbit-icon {
-            position: fixed;
-            transform: translate(-50%, -50%);
-            width:  var(--icon-size);
-            height: var(--icon-size);
-            border-radius: 50%;
-            background: var(--glass);
-            backdrop-filter: blur(18px);
-            -webkit-backdrop-filter: blur(18px);
-            border: 1.5px solid var(--accent);
-            box-shadow: 0 0 20px rgba(0,245,212,0.22);
-            display: flex; align-items: center; justify-content: center;
-            font-size: calc(var(--icon-size) * 0.4);
-            color: var(--accent);
-            text-decoration: none;
-            z-index: 20;
-            transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275),
-                        box-shadow 0.4s ease,
-                        color 0.3s ease,
-                        border-color 0.3s ease,
-                        background 0.3s ease;
-        }
-        /* SVG icons inside circles */
-        .orbit-icon svg { width: 40%; height: 40%; fill: currentColor; }
+  .icon-bubble {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    color: #eee;
+    background: rgba(255,255,255,0.07);
+    border: 1.5px solid rgba(255,255,255,0.18);
+    backdrop-filter: blur(8px);
+    transition: background .22s, box-shadow .22s;
+  }
+  .icon-wrap:hover .icon-bubble {
+    background: rgba(255,255,255,0.15);
+    box-shadow: 0 4px 22px rgba(255,255,255,0.12);
+  }
 
-        /* Individual float rhythms so they never bob in sync */
-        .ic-instagram  { animation: f1 3.8s ease-in-out infinite; }
-        .ic-pinterest  { animation: f2 4.6s ease-in-out infinite; }
-        .ic-tiktok     { animation: f3 3.2s ease-in-out infinite; }
-        .ic-upscrolled { animation: f4 5.1s ease-in-out infinite; }
+  .icon-label {
+    font-size: 10px;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.5);
+    transition: color .22s;
+  }
+  .icon-wrap:hover .icon-label { color: #fff; }
 
-        @keyframes f1 { 0%,100%{transform:translate(-50%,-50%) translateY(0px)}   50%{transform:translate(-50%,-50%) translateY(-11px)} }
-        @keyframes f2 { 0%,100%{transform:translate(-50%,-50%) translateY(-5px)}  50%{transform:translate(-50%,-50%) translateY( 9px)} }
-        @keyframes f3 { 0%,100%{transform:translate(-50%,-50%) translateY(0px)}   50%{transform:translate(-50%,-50%) translateY(-13px)} }
-        @keyframes f4 { 0%,100%{transform:translate(-50%,-50%) translateY( 7px)}  50%{transform:translate(-50%,-50%) translateY(-7px)}  }
+  /* Loading screen */
+  #loading {
+    position: fixed;
+    inset: 0;
+    background: #000;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    z-index: 999;
+    transition: opacity .8s;
+  }
+  #loading.hidden { opacity: 0; pointer-events: none; }
 
-        /* Hover: freeze float, enlarge, brand glow */
-        .orbit-icon:hover {
-            transform: translate(-50%,-50%) scale(1.35) !important;
-            animation-play-state: paused;
-        }
-        .ic-instagram:hover  { color:#E1306C; border-color:#E1306C; box-shadow:0 0 38px #E1306Caa; background:rgba(225,48,108,0.12); }
-        .ic-pinterest:hover  { color:#E60023; border-color:#E60023; box-shadow:0 0 38px #E60023aa; background:rgba(230,0,35,0.12); }
-        .ic-tiktok:hover     { color:#69C9D0; border-color:#69C9D0; box-shadow:0 0 38px #69C9D0aa; background:rgba(105,201,208,0.12); }
-        .ic-upscrolled:hover { color:#8b5cf6; border-color:#8b5cf6; box-shadow:0 0 38px #8b5cf6aa; background:rgba(139,92,246,0.12); }
+  .loading-ring {
+    width: 44px; height: 44px;
+    border: 3px solid rgba(255,255,255,.1);
+    border-top-color: rgba(255,255,255,.7);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
 
-        /* ── Hover labels ── */
-        .orbit-label {
-            position: absolute;
-            bottom: calc(100% + 12px);
-            left: 50%;
-            transform: translateX(-50%) translateY(6px);
-            white-space: nowrap;
-            font-size: 0.6rem; font-weight: 700;
-            letter-spacing: 2px; text-transform: uppercase;
-            color: #fff;
-            background: rgba(0,0,0,0.65);
-            backdrop-filter: blur(10px);
-            padding: 5px 12px;
-            border-radius: 20px;
-            border: 1px solid rgba(255,255,255,0.12);
-            opacity: 0; pointer-events: none;
-            transition: opacity 0.3s ease, transform 0.3s ease;
-        }
-        /* Labels on bottom icons flip to appear above icon */
-        .ic-pinterest  .orbit-label,
-        .ic-upscrolled .orbit-label {
-            bottom: auto;
-            top: calc(100% + 12px);
-            transform: translateX(-50%) translateY(-6px);
-        }
+  .loading-text {
+    font-size: 12px;
+    letter-spacing: .22em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,.4);
+  }
 
-        .orbit-icon:hover .orbit-label { opacity: 1; transform: translateX(-50%) translateY(0); }
-        .ic-pinterest:hover  .orbit-label,
-        .ic-upscrolled:hover .orbit-label { transform: translateX(-50%) translateY(0); }
-
-        /* ══════════════════════════════════
-           POSITIONS  (Earth center ≈ 50vw / 50vh)
-           Icons clustered close to the globe edge
-        ══════════════════════════════════ */
-        .orbit-logo    { left: 50vw;  top: 16vh; }
-        .ic-instagram  { left: 28vw;  top: 30vh; }
-        .ic-pinterest  { left: 26vw;  top: 68vh; }
-        .ic-tiktok     { left: 72vw;  top: 28vh; }
-        .ic-upscrolled { left: 74vw;  top: 66vh; }
-
-        /* ══════════════════════════════════
-           COLOR SWITCHER  (bottom-right)
-        ══════════════════════════════════ */
-        .color-switcher {
-            position: fixed; bottom: 55px; right: 18px;
-            display: flex; flex-direction: column;
-            gap: 8px; z-index: 30;
-        }
-        .color-switcher button {
-            width: 22px; height: 22px;
-            border-radius: 50%;
-            border: 2px solid rgba(255,255,255,0.25);
-            cursor: pointer; transition: all 0.3s;
-        }
-        .color-switcher button:hover { transform: scale(1.38); border-color:#fff; }
-
-        /* ══════════════════════════════════
-           BOTTOM HINT
-        ══════════════════════════════════ */
-        .hint {
-            position: fixed; bottom: 22px; left: 50%;
-            transform: translateX(-50%);
-            font-size: 0.6rem; letter-spacing: 2.5px;
-            text-transform: uppercase;
-            color: rgba(255,255,255,0.28);
-            white-space: nowrap; z-index: 30;
-            opacity: 0;
-            animation: showHint 1s ease 4s forwards;
-        }
-        @keyframes showHint { to { opacity: 1; } }
-
-        /* ══════════════════════════════════
-           MOBILE — portrait
-        ══════════════════════════════════ */
-        @media (max-width: 600px) {
-            :root { --icon-size: clamp(50px, 14vw, 66px); }
-            .orbit-logo    { top: 8vh; }
-            .ic-instagram  { left: 20vw; top: 27vh; }
-            .ic-pinterest  { left: 17vw; top: 70vh; }
-            .ic-tiktok     { left: 77vw; top: 25vh; }
-            .ic-upscrolled { left: 79vw; top: 68vh; }
-        }
-
-        /* ══════════════════════════════════
-           MOBILE — landscape
-        ══════════════════════════════════ */
-        @media (max-height: 500px) and (orientation: landscape) {
-            :root { --icon-size: clamp(42px, 8vmin, 58px); }
-            .orbit-logo    { top: 10vh; }
-            .ic-instagram  { left: 24vw; top: 22vh; }
-            .ic-pinterest  { left: 22vw; top: 75vh; }
-            .ic-tiktok     { left: 74vw; top: 20vh; }
-            .ic-upscrolled { left: 76vw; top: 73vh; }
-        }
-    </style>
+  /* iOS phone (≤ 430px wide, portrait) */
+  @media (max-width: 430px) {
+    .icon-bubble { width: 50px; height: 50px; font-size: 19px; }
+    .icon-label  { font-size: 8px; letter-spacing: .08em; }
+  }
+</style>
 </head>
 <body>
 
-    <!-- Three.js background -->
-    <canvas id="threeCanvas"></canvas>
+<div id="loading">
+  <div class="loading-ring"></div>
+  <span class="loading-text">loading</span>
+</div>
 
-    <!-- Loading screen -->
-    <div id="loader">
-        <div class="loader-ring"></div>
-        <p class="loader-label">Loading</p>
-        <p class="loader-pct" id="loaderPct">0%</p>
-    </div>
+<!-- Layer 3: Three.js (transparent, on top) -->
+<canvas id="c"></canvas>
 
-    <!-- ── Logo ── -->
-    <div class="orbit-logo">
-        <img src="https://i.postimg.cc/65KGqwDQ/IMG-1999-removebg-preview.png" alt="bdrspen">
-    </div>
+<!-- Layer 1: OrbitControls event target -->
+<div id="orbit-target"></div>
 
-    <!-- ── Social icon links ── -->
-    <a href="https://www.instagram.com/bdrspen/"
-       class="orbit-icon ic-instagram" target="_blank" rel="noopener noreferrer">
-        <i class="fab fa-instagram"></i>
-        <span class="orbit-label">Instagram</span>
-    </a>
+<!-- Layer 2b: Curved text (SVG) -->
+<svg id="arc-svg" aria-hidden="true">
+  <defs>
+    <path id="arc-path" d="" fill="none"/>
+  </defs>
+  <text id="arc-text-el" text-anchor="middle" dominant-baseline="auto">
+    <textPath id="arc-tp" href="#arc-path" startOffset="50%">
+      <tspan id="typing-text"></tspan>
+    </textPath>
+  </text>
+</svg>
 
-    <a href="https://www.pinterest.com/bdrspen/"
-       class="orbit-icon ic-pinterest" target="_blank" rel="noopener noreferrer">
-        <i class="fab fa-pinterest"></i>
-        <span class="orbit-label">Pinterest</span>
-    </a>
+<!-- Layer 2: Social icons (orbiting) -->
+<a class="icon-wrap" id="icon-ig"
+   href="https://www.instagram.com/bdrspen"
+   target="_blank" rel="noopener" aria-label="Instagram">
+  <div class="icon-bubble"><i class="fab fa-instagram"></i></div>
+  <span class="icon-label">Instagram</span>
+</a>
 
-    <a href="https://www.tiktok.com/@bdrs_pen"
-       class="orbit-icon ic-tiktok" target="_blank" rel="noopener noreferrer">
-        <i class="fab fa-tiktok"></i>
-        <span class="orbit-label">TikTok</span>
-    </a>
+<a class="icon-wrap" id="icon-pi"
+   href="https://www.pinterest.com/bdrspen"
+   target="_blank" rel="noopener" aria-label="Pinterest">
+  <div class="icon-bubble"><i class="fab fa-pinterest"></i></div>
+  <span class="icon-label">Pinterest</span>
+</a>
 
-    <a href="https://share.upscrolled.com/en/user/d0bd7970-3bb1-48e0-9b04-455481b0833a/"
-       class="orbit-icon ic-upscrolled" target="_blank" rel="noopener noreferrer">
-        <svg viewBox="0 0 24 24">
-            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10
-                     10-4.48 10-10S17.52 2 12 2zm0 18c-4.41
-                     0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59
-                     8-8 8zm-1-10.59V16c0 .55.45 1 1 1s1-.45
-                     1-1V9.41l2.29 2.29c.39.39 1.02.39 1.41
-                     0 .39-.39.39-1.02 0-1.41l-4-4c-.39-.39
-                     -1.02-.39-1.41 0l-4 4c-.39.39-.39 1.02
-                     0 1.41.39.39 1.02.39 1.41 0L11 9.41z"/>
-        </svg>
-        <span class="orbit-label">Upscrolled</span>
-    </a>
+<a class="icon-wrap" id="icon-tt"
+   href="https://www.tiktok.com/@bdrspen"
+   target="_blank" rel="noopener" aria-label="TikTok">
+  <div class="icon-bubble"><i class="fab fa-tiktok"></i></div>
+  <span class="icon-label">TikTok</span>
+</a>
 
-    <!-- Color switcher -->
-    <div class="color-switcher">
-        <button onclick="setColor('blue')"  style="background:#00bbff" title="Blue"></button>
-        <button onclick="setColor('green')" style="background:#00f5d4" title="Green"></button>
-        <button onclick="setColor('red')"   style="background:#ff4d4d" title="Red"></button>
-        <button onclick="setColor('pink')"  style="background:#ff00ff" title="Pink"></button>
-    </div>
+<a class="icon-wrap" id="icon-up"
+   href="https://upscrolled.com/bdrspen"
+   target="_blank" rel="noopener" aria-label="Upscrolled">
+  <div class="icon-bubble"><i class="fa-solid fa-scroll"></i></div>
+  <span class="icon-label">Upscrolled</span>
+</a>
 
-    <!-- Hint -->
-    <p class="hint">drag to rotate &nbsp;·&nbsp; scroll to zoom &nbsp;·&nbsp; pinch on mobile</p>
+<script type="module">
+import * as THREE          from 'three';
+import { OrbitControls }   from 'three/addons/controls/OrbitControls.js';
+import { GLTFLoader }      from 'three/addons/loaders/GLTFLoader.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 
-    <!-- UI logic -->
-    <script>
-        function setColor(n) {
-            document.documentElement.setAttribute('data-color', n);
-            localStorage.setItem('userColor', n);
-        }
-        setColor(localStorage.getItem('userColor') || 'green');
-    </script>
+// ── Renderer (transparent → white body shows through) ─────
+const canvas   = document.getElementById('c');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.toneMapping         = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.2;
+renderer.outputColorSpace    = THREE.SRGBColorSpace;
 
-    <!-- ══════════════════════════════════════════════════
-         THREE.JS  —  Earth (or swap with your .glb model)
-    ══════════════════════════════════════════════════ -->
-    <script type="module">
-        import * as THREE        from 'three';
-        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-        import { GLTFLoader }    from 'three/addons/loaders/GLTFLoader.js';
+// ── Scene ─────────────────────────────────────────────────
+const scene = new THREE.Scene();
+// no scene.background — stays transparent
 
-        /* ─── Renderer ─── */
-        const canvas   = document.getElementById('threeCanvas');
-        const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.toneMapping         = THREE.ACESFilmicToneMapping;
-        renderer.toneMappingExposure = 0.55;
+const pmrem = new THREE.PMREMGenerator(renderer);
+scene.environment = pmrem.fromScene(new RoomEnvironment()).texture;
+pmrem.dispose();
 
-        /* ─── Scene & Camera ─── */
-        const scene  = new THREE.Scene();
-        const camera = new THREE.PerspectiveCamera(
-            45, window.innerWidth / window.innerHeight, 0.1, 2000
-        );
-        // Portrait screens: pull camera back so Earth fits with room for icons
-        camera.position.z = window.innerWidth < window.innerHeight ? 10 : 7;
+// Very dim ambient — just enough so the dark side isn't pure void on black
+scene.add(new THREE.AmbientLight(0xffffff, 0.12));
 
-        /* ─── Orbit Controls ─── */
-        const controls = new OrbitControls(camera, canvas);
-        controls.enableDamping   = true;
-        controls.dampingFactor   = 0.04;
-        controls.autoRotate      = true;
-        controls.autoRotateSpeed = 0.4;
-        controls.enableZoom      = true;
-        controls.minDistance     = 2.2;
-        controls.maxDistance     = 18;
-        controls.enablePan       = false;
-        controls.touches         = {
-            ONE: THREE.TOUCH.ROTATE,
-            TWO: THREE.TOUCH.DOLLY_ROTATE
-        };
+// ── Camera ────────────────────────────────────────────────
+const camera = new THREE.PerspectiveCamera(45, innerWidth / innerHeight, 0.1, 1000);
+camera.position.set(0, 0, 7);
 
-        // Pause auto-rotate while user interacts; resume 3s after release
-        let resumeTimer;
-        controls.addEventListener('start', () => {
-            controls.autoRotate = false;
-            clearTimeout(resumeTimer);
-        });
-        controls.addEventListener('end', () => {
-            resumeTimer = setTimeout(() => { controls.autoRotate = true; }, 3000);
-        });
+// ── OrbitControls on the invisible catch div ──────────────
+const controls = new OrbitControls(camera, document.getElementById('orbit-target'));
+controls.enableDamping   = true;
+controls.dampingFactor   = 0.08;
+controls.minDistance     = 2;
+controls.maxDistance     = 14;
+controls.autoRotate      = false; // user controls camera freely
 
-        /* ─── Stars ─── */
-        (() => {
-            const N   = 5000;
-            const pos = new Float32Array(N * 3);
-            const col = new Float32Array(N * 3);
-            for (let i = 0; i < N; i++) {
-                const r = 600 + Math.random() * 500;
-                const t = Math.random() * Math.PI * 2;
-                const p = Math.acos(2 * Math.random() - 1);
-                pos[i*3]   = r * Math.sin(p) * Math.cos(t);
-                pos[i*3+1] = r * Math.sin(p) * Math.sin(t);
-                pos[i*3+2] = r * Math.cos(p);
-                const w    = Math.random();
-                col[i*3]   = 0.84 + w * 0.16;
-                col[i*3+1] = 0.84 + w * 0.08;
-                col[i*3+2] = 0.90 + (1 - w) * 0.10;
-            }
-            const geo = new THREE.BufferGeometry();
-            geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-            geo.setAttribute('color',    new THREE.BufferAttribute(col, 3));
-            scene.add(new THREE.Points(geo, new THREE.PointsMaterial({
-                size: 0.7, vertexColors: true,
-                transparent: true, opacity: 0.85, sizeAttenuation: true
-            })));
-        })();
+// ── Animation mixer ───────────────────────────────────────
+const clock = new THREE.Clock();
+let   mixer = null;
 
-        /* ─── Loading Manager ─── */
-        const loaderEl = document.getElementById('loader');
-        const pctEl    = document.getElementById('loaderPct');
-        const manager  = new THREE.LoadingManager(
-            () => {
-                pctEl.textContent = '100%';
-                setTimeout(() => {
-                    loaderEl.classList.add('fade');
-                    setTimeout(() => loaderEl.remove(), 1300);
-                }, 350);
-            },
-            (_, loaded, total) => {
-                pctEl.textContent = Math.round(loaded / total * 100) + '%';
-            },
-            url => console.warn('Load error:', url)
-        );
-        const texLoader = new THREE.TextureLoader(manager);
+// ── Load Blender model ────────────────────────────────────
+const loadingEl = document.getElementById('loading');
+const manager   = new THREE.LoadingManager();
+manager.onLoad  = () => loadingEl.classList.add('hidden');
 
-        /* ══════════════════════════════════════════════════════
-           EARTH GLOBE  ─  demo 3D object
-           ─────────────────────────────────────────────────────
-           Replace this whole section with the GLTF block below
-           once you have your Blender model hosted online.
-        ══════════════════════════════════════════════════════ */
-        const PLANET = 'https://raw.githubusercontent.com/mrdoob/three.js/r160/examples/textures/planets/';
+new GLTFLoader(manager).load(
+  'https://raw.githubusercontent.com/lokanoka/bdrspen-assets/refs/heads/main/bdrspen-model.glb',
+  ({ scene: model, animations }) => {
 
-        const earthGroup = new THREE.Group();
-        scene.add(earthGroup);
+    const box    = new THREE.Box3().setFromObject(model);
+    const center = box.getCenter(new THREE.Vector3());
+    const size   = box.getSize(new THREE.Vector3());
+    model.position.sub(center);
+    model.scale.setScalar(3.4 / Math.max(size.x, size.y, size.z));
 
-        let earthMesh = new THREE.Mesh(
-            new THREE.SphereGeometry(1.7, 96, 96),
-            new THREE.MeshPhongMaterial({
-                map:         texLoader.load(PLANET + 'earth_atmos_2048.jpg'),
-                specularMap: texLoader.load(PLANET + 'earth_specular_2048.jpg'),
-                specular:    new THREE.Color(0x1a1a1a),
-                normalMap:   texLoader.load(PLANET + 'earth_normal_2048.jpg'),
-                normalScale: new THREE.Vector2(5, 5),
-                shininess:   14,
-            })
-        );
-        earthGroup.add(earthMesh);
+    // Boost Blender emission
+    model.traverse(child => {
+      if (!child.isMesh) return;
+      const mats = Array.isArray(child.material) ? child.material : [child.material];
+      mats.forEach(m => {
+        if (m.emissive && m.emissive.r + m.emissive.g + m.emissive.b > 0.01)
+          m.emissiveIntensity = Math.min(m.emissiveIntensity * 2, 3);
+      });
+    });
 
-        let cloudMesh = new THREE.Mesh(
-            new THREE.SphereGeometry(1.74, 64, 64),
-            new THREE.MeshPhongMaterial({
-                map:         texLoader.load(PLANET + 'earth_clouds_2048.png'),
-                transparent: true, opacity: 0.38, depthWrite: false,
-            })
-        );
-        earthGroup.add(cloudMesh);
+    scene.add(model);
 
-        // Atmosphere glow — inner
-        earthGroup.add(new THREE.Mesh(
-            new THREE.SphereGeometry(1.78, 64, 64),
-            new THREE.MeshPhongMaterial({
-                color: 0x0055cc, transparent: true, opacity: 0.10,
-                side: THREE.BackSide, blending: THREE.AdditiveBlending, depthWrite: false,
-            })
-        ));
-        // Atmosphere glow — outer halo
-        earthGroup.add(new THREE.Mesh(
-            new THREE.SphereGeometry(2.05, 64, 64),
-            new THREE.MeshPhongMaterial({
-                color: 0x0033aa, transparent: true, opacity: 0.04,
-                side: THREE.BackSide, blending: THREE.AdditiveBlending, depthWrite: false,
-            })
-        ));
+    if (animations && animations.length > 0) {
+      mixer = new THREE.AnimationMixer(model);
+      mixer.timeScale = 0.35; // slow-motion: 35% of original speed
+      animations.forEach(clip => mixer.clipAction(clip).play());
+    }
+  },
+  undefined,
+  err => {
+    console.error(err);
+    document.querySelector('.loading-text').textContent = 'model unavailable';
+    setTimeout(() => loadingEl.classList.add('hidden'), 2000);
+  }
+);
 
-        /* ══════════════════════════════════════════════════════
-           YOUR BLENDER MODEL
-           ─────────────────────────────────────────────────────
-           Step 1 — Blender: File → Export → glTF 2.0 (.glb)
-           Step 2 — Host the .glb (GitHub raw, Drive, Dropbox…)
-           Step 3 — Comment out EARTH GLOBE section above
-           Step 4 — Uncomment below, paste your URL
-        ══════════════════════════════════════════════════════ */
-        /*
-        const gltfLoader = new GLTFLoader(manager);
-        gltfLoader.load(
-            'PASTE_YOUR_MODEL_URL_HERE.glb',
-            (gltf) => {
-                const model  = gltf.scene;
-                const box    = new THREE.Box3().setFromObject(model);
-                const center = box.getCenter(new THREE.Vector3());
-                const size   = box.getSize(new THREE.Vector3());
-                model.position.sub(center);                     // center at origin
-                model.scale.setScalar(3.4 / Math.max(size.x, size.y, size.z)); // auto-fit
-                scene.add(model);
-            },
-            undefined,
-            err => console.error('GLTF error:', err)
-        );
-        */
+// ────────────────────────────────────────────────────────────
+// ICON ORBIT  (elliptical ring — flat circle viewed at angle)
+// x = cx + R · cos(θ)
+// y = cy + R · sin(θ) · FLAT   (FLAT < 1 gives 3-D ring look)
+// ────────────────────────────────────────────────────────────
+const FLAT = 0.36;            // vertical squish (tilt illusion)
 
-        /* ─── Lighting ─── */
-        scene.add(new THREE.AmbientLight(0xffffff, 0.22));
+const iconEls = [
+  document.getElementById('icon-ig'),
+  document.getElementById('icon-pi'),
+  document.getElementById('icon-tt'),
+  document.getElementById('icon-up'),
+];
+const N = iconEls.length;
 
-        const sun = new THREE.DirectionalLight(0xfff8e0, 1.6);
-        sun.position.set(-4, 1.5, 2.5);
-        scene.add(sun);
+let orbitAngle   = Math.PI * 0.6; // initial spread
+let ringVelocity = 0;             // momentum after user releases drag
+const FRICTION   = 0.91;          // velocity decay per frame
 
-        const fill = new THREE.DirectionalLight(0x88aaff, 0.15);
-        fill.position.set(4, -1, -2);
-        scene.add(fill);
+function getR() {
+  // On portrait phones innerWidth is the short side — use it directly.
+  // On landscape / desktop use the smaller dimension.
+  // Cap so icons never push off-screen on very narrow viewports.
+  return Math.min(innerWidth * 0.38, innerHeight * 0.29, 260);
+}
 
-        /* ─── Resize ─── */
-        window.addEventListener('resize', () => {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-        });
+function updateIcons() {
+  const cx   = innerWidth  / 2;
+  const cy   = innerHeight / 2;
+  const R    = getR();
+  const Ry   = R * FLAT;
 
-        /* ─── Depth effect refs ─── */
-        const allIcons = [...document.querySelectorAll('.orbit-icon, .orbit-logo')];
-        const MIN_D    = controls.minDistance;   // 2.2
-        const MAX_D    = controls.maxDistance;   // 18
-        const FADE_AT  = 0.62; // t value where fading begins (user is noticeably zoomed in)
+  // Camera-zoom depth factor (icons shrink/fade when zooming into model)
+  const dist  = controls.getDistance();
+  const zoomT = Math.max(0, Math.min(1, (7 - dist) / 5));
 
-        /* ─── Render loop ─── */
-        function animate() {
-            requestAnimationFrame(animate);
-            if (earthMesh) earthMesh.rotation.y += 0.0007;
-            if (cloudMesh) cloudMesh.rotation.y += 0.0010;
-            controls.update();
+  iconEls.forEach((el, i) => {
+    const θ = orbitAngle + (i * Math.PI * 2 / N);
+    const x = cx + R  * Math.cos(θ);
+    const y = cy + Ry * Math.sin(θ);
 
-            // ── Depth illusion: Earth rises in front of icons as user zooms in ──
-            // t = 0 when camera is closest (max zoom), t = 1 when furthest (zoomed out)
-            const dist = controls.getDistance();
-            const t    = Math.max(0, Math.min(1, (dist - MIN_D) / (MAX_D - MIN_D)));
+    // Depth: sin(θ) = +1 → bottom (front, closest), -1 → top (back, furthest)
+    const depth   = (Math.sin(θ) + 1) / 2;   // 0 = back, 1 = front
+    const scale   = (0.62 + 0.38 * depth) * (1 - zoomT * 0.45);
+    const opacity = (0.38 + 0.62 * depth) * (1 - zoomT * 0.85);
 
-            // Icons stay fully visible while zoomed out; fade + blur as Earth fills screen
-            const opac = t < FADE_AT
-                ? Math.pow(t / FADE_AT, 1.15)   // 0 → 1 across the fade range
-                : 1.0;
-            const blur = t < FADE_AT
-                ? (1 - t / FADE_AT) * 6          // up to 6px depth-of-field blur
-                : 0;
+    // Front half of orbit: sit above canvas (z:21) so icons pass IN FRONT of model.
+    // Back half: sit below canvas (z:15) so model covers them.
+    el.style.zIndex    = depth > 0.5 ? '21' : '15';
+    el.style.left      = x + 'px';
+    el.style.top       = y + 'px';
+    el.style.transform = `translate(-50%,-50%) scale(${scale.toFixed(3)})`;
+    el.style.opacity   = opacity.toFixed(3);
+  });
 
-            allIcons.forEach(el => {
-                el.style.opacity       = opac.toFixed(3);
-                el.style.filter        = blur > 0.05 ? `blur(${blur.toFixed(2)}px)` : '';
-                el.style.pointerEvents = opac < 0.12 ? 'none' : 'auto';
-            });
+  // Apply momentum when not actively dragging
+  if (!ringDrag.active) {
+    ringVelocity *= FRICTION;
+    orbitAngle   += ringVelocity;
+  }
+}
 
-            renderer.render(scene, camera);
-        }
-        animate();
-    </script>
+// ────────────────────────────────────────────────────────────
+// DRAG-TO-SPIN — horizontal drag rotates the icon ring
+// Drag from any icon OR from empty background space.
+// Vertical drag → OrbitControls (camera). Horizontal → ring.
+// ────────────────────────────────────────────────────────────
+const ringDrag = {
+  active:   false,
+  startX:   0,
+  startY:   0,
+  lastX:    0,
+  isHoriz:  null,   // null=undecided, true=ring, false=camera
+  hasMoved: false,
+};
+
+function onDragStart(e, fromIcon) {
+  ringDrag.startX   = ringDrag.lastX = e.clientX;
+  ringDrag.startY   = e.clientY;
+  ringDrag.isHoriz  = fromIcon ? true : null;
+  ringDrag.active   = fromIcon;
+  ringDrag.hasMoved = false;
+  ringVelocity      = 0;
+  if (fromIcon) {
+    e.stopPropagation();
+    if (e.target.setPointerCapture) e.target.setPointerCapture(e.pointerId);
+  }
+}
+
+// Drag starting on any icon
+iconEls.forEach(el => {
+  el.addEventListener('pointerdown', e => onDragStart(e, true));
+  el.addEventListener('click', e => { if (ringDrag.hasMoved) e.preventDefault(); });
+});
+
+// Drag starting on background (orbit-target)
+document.getElementById('orbit-target')
+  .addEventListener('pointerdown', e => onDragStart(e, false));
+
+document.addEventListener('pointermove', e => {
+  const dx = e.clientX - ringDrag.startX;
+  const dy = e.clientY - ringDrag.startY;
+
+  // Determine axis on first meaningful movement
+  if (ringDrag.isHoriz === null && (Math.abs(dx) > 6 || Math.abs(dy) > 6)) {
+    ringDrag.isHoriz = Math.abs(dx) >= Math.abs(dy);
+    if (ringDrag.isHoriz) {
+      ringDrag.active       = true;
+      controls.enableRotate = false; // suppress camera yaw while spinning ring
+    }
+  }
+
+  if (!ringDrag.active) return;
+
+  const ddx = e.clientX - ringDrag.lastX;
+  if (Math.abs(ddx) > 2) ringDrag.hasMoved = true;
+
+  // Half-screen width drag ≈ one full revolution
+  ringVelocity  = ddx / innerWidth * Math.PI * 2.8;
+  orbitAngle   += ringVelocity;
+  ringDrag.lastX = e.clientX;
+});
+
+document.addEventListener('pointerup', () => {
+  ringDrag.active  = false;
+  ringDrag.isHoriz = null;
+  controls.enableRotate = true;
+  // ringVelocity carries momentum in updateIcons()
+});
+
+// ────────────────────────────────────────────────────────────
+// ARC TEXT  — SVG textPath following the top of the orbit ring
+// ────────────────────────────────────────────────────────────
+const arcPathEl = document.getElementById('arc-path');
+const arcTextEl = document.getElementById('arc-text-el');
+const typingEl  = document.getElementById('typing-text');
+
+function updateArcPath() {
+  const cx = innerWidth  / 2;
+  const cy = innerHeight / 2;
+  const R  = getR();
+
+  // Pure circle (not flattened) for maximum visible curvature.
+  // Sweeps -162° → -18°  (144° arc) — a wide, clearly curved half-circle at the top.
+  const a1 = -162 * Math.PI / 180;
+  const a2 =  -18 * Math.PI / 180;
+
+  const x1 = cx + R * Math.cos(a1);
+  const y1 = cy + R * Math.sin(a1);
+  const x2 = cx + R * Math.cos(a2);
+  const y2 = cy + R * Math.sin(a2);
+
+  // rx=R, ry=R → perfect circle arc, sweep=1 (clockwise, left→top→right)
+  arcPathEl.setAttribute('d', `M ${x1} ${y1} A ${R} ${R} 0 0 1 ${x2} ${y2}`);
+
+  // Responsive font size
+  const fs = Math.max(13, Math.min(19, innerWidth * 0.016));
+  const ls = Math.max(7,  Math.min(13, innerWidth * 0.011));
+  arcTextEl.setAttribute('font-size',      fs);
+  arcTextEl.setAttribute('letter-spacing', ls);
+  arcTextEl.setAttribute('fill',          '#ffffff');
+  arcTextEl.setAttribute('font-family',   "'Segoe UI', system-ui, sans-serif");
+  arcTextEl.setAttribute('font-weight',   '700');
+}
+updateArcPath();
+
+window.addEventListener('resize', () => {
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+  updateArcPath();
+});
+
+// ────────────────────────────────────────────────────────────
+// TYPEWRITER on the arc
+// ────────────────────────────────────────────────────────────
+const WORD  = 'bdrspen';
+let charIdx  = 0;
+let erasing  = false;
+let cursorOn = true;
+
+// Blinking cursor (toggle independently)
+setInterval(() => { cursorOn = !cursorOn; redraw(); }, 530);
+
+function redraw() {
+  // Space placeholder keeps arc path visible even when cursor is off
+  typingEl.textContent = WORD.slice(0, charIdx) + (cursorOn ? '|' : '\u00a0');
+}
+
+function tick() {
+  if (!erasing) {
+    charIdx++;
+    redraw();
+    if (charIdx >= WORD.length) {
+      // Fully typed — hold, then erase
+      setTimeout(() => { erasing = true; tick(); }, 2100);
+      return;
+    }
+    setTimeout(tick, 115);
+  } else {
+    charIdx--;
+    redraw();
+    if (charIdx <= 0) {
+      charIdx = 0;
+      erasing = false;
+      setTimeout(tick, 480);
+      return;
+    }
+    setTimeout(tick, 72);
+  }
+}
+setTimeout(tick, 700); // slight delay before first letter
+
+// ── Render loop ───────────────────────────────────────────
+(function animate() {
+  requestAnimationFrame(animate);
+  const delta = clock.getDelta();
+  if (mixer) mixer.update(delta);
+  controls.update();
+  updateIcons();
+  renderer.render(scene, camera);
+})();
+</script>
 
 </body>
 </html>
