@@ -7,6 +7,8 @@
 
 <link rel="stylesheet"
   href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+<link rel="stylesheet"
+  href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" />
 
 <script async src="https://unpkg.com/es-module-shims@1.10.0/dist/es-module-shims.js"></script>
 
@@ -23,30 +25,21 @@
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
   body {
-    background: #2d2924;   /* warm dark fallback while image loads */
+    background:
+      /* dark green → near-black depth well in the centre */
+      radial-gradient(ellipse 70% 60% at 50% 50%,
+        #000000          0%,
+        #010d02         25%,
+        #021505         50%,
+        #030a04         75%,
+        #030a04        100%);
+    background-attachment: fixed;
     overflow: hidden;
     font-family: 'Segoe UI', system-ui, sans-serif;
     padding: env(safe-area-inset-top)  env(safe-area-inset-right)
              env(safe-area-inset-bottom) env(safe-area-inset-left);
   }
 
-  /* ── Photo background — img+object-fit is reliable on iOS Safari ── */
-  #bg-wrap {
-    position: fixed; inset: 0;
-    z-index: 1; pointer-events: none;
-    overflow: hidden;
-  }
-  #bg-img {
-    width: 100%; height: 100%;
-    object-fit: cover;
-    object-position: center center;
-    display: block;
-  }
-  /* dark warm overlay for legibility */
-  #bg-overlay {
-    position: absolute; inset: 0;
-    background: rgba(18,14,10,0.38);
-  }
 
   #c {
     position: fixed; inset: 0;
@@ -65,10 +58,10 @@
     z-index: 21; pointer-events: none; overflow: visible;
   }
 
-  /* ── Bottom button row — top is set by JS to align with the rings in the bg image ── */
+  /* ── Bottom button row ── */
   #btn-track {
     position: fixed;
-    top: 75%;          /* fallback before JS runs */
+    bottom: 10%;
     left: 0; right: 0; z-index: 15;
     overflow-x: auto;
     overflow-y: clip;
@@ -76,7 +69,6 @@
     scroll-snap-type: x mandatory;
     scrollbar-width: none;
     padding: 14px 0;
-    transform: translateY(-50%); /* keep centre of track at the calculated line */
   }
   #btn-track::-webkit-scrollbar { display: none; }
 
@@ -150,41 +142,45 @@
   .btn-circle.popping { animation: ball-squish .5s cubic-bezier(.36,.07,.19,.97) both; }
 
   /* ── Per-ball dark-glass colors ── */
-  .ball-red {
-    background: radial-gradient(circle at 32% 28%,
-      rgba(255,150,150,0.80) 0%,
-      rgba(180,20,20,0.82)   40%,
-      rgba(75,0,0,0.92)      75%);
-    box-shadow: 0 6px 24px rgba(180,0,0,0.45),
-                inset 0 1px 0 rgba(255,140,140,0.20);
-    border-color: rgba(255,100,100,0.30);
-  }
-  .ball-orange {
-    background: radial-gradient(circle at 32% 28%,
-      rgba(255,210,140,0.80) 0%,
-      rgba(200,80,0,0.82)    40%,
-      rgba(85,25,0,0.92)     75%);
-    box-shadow: 0 6px 24px rgba(190,75,0,0.45),
-                inset 0 1px 0 rgba(255,175,100,0.20);
-    border-color: rgba(255,145,60,0.30);
-  }
+  /* Instagram = yellow */
   .ball-yellow {
     background: radial-gradient(circle at 32% 28%,
       rgba(255,255,170,0.80) 0%,
-      rgba(190,145,0,0.82)   40%,
-      rgba(80,50,0,0.92)     75%);
-    box-shadow: 0 6px 24px rgba(190,155,0,0.45),
-                inset 0 1px 0 rgba(255,240,110,0.20);
-    border-color: rgba(255,215,40,0.30);
+      rgba(210,165,0,0.85)   40%,
+      rgba(90,60,0,0.92)     75%);
+    box-shadow: 0 3px 10px rgba(210,175,0,0.20),
+                inset 0 1px 0 rgba(255,245,120,0.15);
+    border-color: rgba(255,220,40,0.22);
   }
+  /* Pinterest = deep model blue */
+  .ball-blue {
+    background: radial-gradient(circle at 32% 28%,
+      rgba(140,190,255,0.80) 0%,
+      rgba(0,80,210,0.85)    40%,
+      rgba(0,18,90,0.92)     75%);
+    box-shadow: 0 3px 10px rgba(0,90,220,0.22),
+                inset 0 1px 0 rgba(140,190,255,0.18);
+    border-color: rgba(80,150,255,0.25);
+  }
+  /* TikTok = red */
+  .ball-red {
+    background: radial-gradient(circle at 32% 28%,
+      rgba(255,150,150,0.80) 0%,
+      rgba(200,15,15,0.85)   40%,
+      rgba(80,0,0,0.92)      75%);
+    box-shadow: 0 3px 10px rgba(200,0,0,0.20),
+                inset 0 1px 0 rgba(255,140,140,0.15);
+    border-color: rgba(255,90,90,0.22);
+  }
+  /* Upscrolled = green (unchanged) */
   .ball-green {
     background: radial-gradient(circle at 32% 28%,
       rgba(160,255,190,0.80) 0%,
       rgba(0,165,58,0.82)    40%,
       rgba(0,55,16,0.92)     75%);
-    box-shadow: 0 6px 24px rgba(0,160,55,0.45),
-                inset 0 1px 0 rgba(120,255,155,0.20);
-    border-color: rgba(60,225,110,0.30);
+    box-shadow: 0 3px 10px rgba(0,160,55,0.20),
+                inset 0 1px 0 rgba(120,255,155,0.15);
+    border-color: rgba(60,225,110,0.22);
   }
 
   /* ── Hint overlay ── */
@@ -235,22 +231,29 @@
     text-transform: uppercase; color: rgba(210,198,172,.45);
   }
 
-  /* ── Footer — top set by JS to sit below the rings ── */
+  /* ── Footer ── */
   #footer {
-    position: fixed; top: 80%; left: 0; right: 0;
+    position: fixed; bottom: 0; left: 0; right: 0;
     z-index: 15; text-align: center;
-    padding: 6px 0;
+    padding: 10px 0 calc(10px + env(safe-area-inset-bottom));
   }
   #footer a {
     font-size: 11px; letter-spacing: .12em;
     text-transform: uppercase; text-decoration: none;
     font-weight: 700;
     color: #FFD700;
-    animation: footer-glow 2.8s ease-in-out infinite alternate;
+    display: inline-block; /* needed so translateY works */
+    text-shadow: 0 0 6px rgba(255,215,0,0.5);
+    animation: pick-me 3s ease-in-out infinite;
   }
-  @keyframes footer-glow {
-    from { text-shadow: 0 0 4px rgba(255,215,0,0.4); }
-    to   { text-shadow: 0 0 14px rgba(255,215,0,0.95), 0 0 28px rgba(255,200,0,0.4); }
+  @keyframes pick-me {
+    /* sit still most of the time, then do two quick hops */
+    0%        { transform: translateY(0);    }
+    88%       { transform: translateY(0);    }
+    91%       { transform: translateY(-10px); }
+    94%       { transform: translateY(0);    }
+    97%       { transform: translateY(-6px); }
+    100%      { transform: translateY(0);    }
   }
 
   @media (max-width: 430px) {
@@ -262,13 +265,6 @@
 </head>
 <body>
 
-<!-- photo background — img+object-fit for correct iOS sizing -->
-<div id="bg-wrap">
-  <img id="bg-img"
-       src="https://raw.githubusercontent.com/lokanoka/bdrspen-assets/refs/heads/main/bdrspen-bg.jpg.png"
-       alt="" aria-hidden="true" fetchpriority="high">
-  <div id="bg-overlay"></div>
-</div>
 
 <div id="loading">
   <div class="loading-ring"></div>
@@ -299,17 +295,17 @@
   <div id="btn-row">
     <a class="btn-item" href="https://www.instagram.com/bdrspen"
        target="_blank" rel="noopener" aria-label="Instagram">
-      <div class="btn-circle ball-red"><i class="fab fa-instagram"></i></div>
+      <div class="btn-circle ball-yellow"><i class="fab fa-instagram"></i></div>
       <span class="btn-label">Instagram</span>
     </a>
     <a class="btn-item" href="https://www.pinterest.com/bdrspen"
        target="_blank" rel="noopener" aria-label="Pinterest">
-      <div class="btn-circle ball-orange"><i class="fab fa-pinterest"></i></div>
+      <div class="btn-circle ball-blue"><i class="fab fa-pinterest"></i></div>
       <span class="btn-label">Pinterest</span>
     </a>
     <a class="btn-item" href="https://www.tiktok.com/@bdrspen"
        target="_blank" rel="noopener" aria-label="TikTok">
-      <div class="btn-circle ball-yellow"><i class="fab fa-tiktok"></i></div>
+      <div class="btn-circle ball-red"><i class="fab fa-tiktok"></i></div>
       <span class="btn-label">TikTok</span>
     </a>
     <a class="btn-item" href="https://upscrolled.com/bdrspen"
@@ -480,41 +476,8 @@ window.addEventListener('resize', () => {
   camera.updateProjectionMatrix();
   renderer.setSize(innerWidth, innerHeight);
   updateArcPath();
-  alignButtonsToRings();
 });
 
-// ── Align buttons to the ring area in the background image ──
-// Original image dimensions
-const BG_IMG_W = 1694;
-const BG_IMG_H = 2528;
-// Where the centre of the 4 rings sits in the original image (0–1)
-const RINGS_Y  = 0.805;  // ~80.5% from top = y≈2035 in the 2528px image
-
-const btnTrack  = document.getElementById('btn-track');
-const footerEl  = document.getElementById('footer');
-
-function alignButtonsToRings() {
-  const vw = window.innerWidth;
-  const vh = window.innerHeight;
-
-  // object-fit:cover scale
-  const scale   = Math.max(vw / BG_IMG_W, vh / BG_IMG_H);
-
-  // Pixels of image that extend above the viewport top edge
-  const offsetY = (BG_IMG_H * scale - vh) / 2;
-
-  // Screen Y where the ring centre lands
-  const ringScreenY = BG_IMG_H * RINGS_Y * scale - offsetY;
-
-  // Centre the button track on that line
-  btnTrack.style.top    = ringScreenY + 'px';
-  btnTrack.style.bottom = 'auto';
-
-  // Footer sits 14px below the bottom of the track (track height ≈ 100px with padding)
-  footerEl.style.top    = (ringScreenY + 64) + 'px';
-  footerEl.style.bottom = 'auto';
-}
-alignButtonsToRings();
 
 // ── Arc title ─────────────────────────────────────────────
 const arcPathEl = document.getElementById('arc-path');
@@ -538,13 +501,13 @@ function updateArcPath() {
   arcTextEl.setAttribute('letter-spacing', Math.max(7,  Math.min(13, innerWidth * 0.011)));
   arcTextEl.setAttribute('fill',           '#FFD700');
   arcTextEl.setAttribute('filter',         'url(#txt-shadow)');
-  arcTextEl.setAttribute('font-family',    "'Segoe UI', system-ui, sans-serif");
+  arcTextEl.setAttribute('font-family',    "'Press Start 2P', monospace");
   arcTextEl.setAttribute('font-weight',    '700');
 }
 updateArcPath();
 
 // ── Typewriter ────────────────────────────────────────────
-const WORD  = 'bdrspen';
+const WORD  = 'BDRSPEN';
 let charIdx = 0, erasing = false, cursorOn = true;
 setInterval(() => { cursorOn = !cursorOn; redraw(); }, 530);
 function redraw() { typingEl.textContent = WORD.slice(0, charIdx) + (cursorOn ? '|' : '\u00a0'); }
