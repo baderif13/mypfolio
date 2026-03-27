@@ -8,7 +8,6 @@
 <link rel="stylesheet"
   href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
 
-<!-- Polyfill: enables import maps on iOS Safari < 16.4 -->
 <script async src="https://unpkg.com/es-module-shims@1.10.0/dist/es-module-shims.js"></script>
 
 <script type="importmap">
@@ -24,217 +23,238 @@
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
   body {
-    background: #000;
+    background: #2d2924;   /* warm dark fallback while image loads */
     overflow: hidden;
     font-family: 'Segoe UI', system-ui, sans-serif;
     padding: env(safe-area-inset-top)  env(safe-area-inset-right)
              env(safe-area-inset-bottom) env(safe-area-inset-left);
   }
 
-  /*
-    LAYOUT (top → bottom):
-      ① bdrspen arc title  (SVG, z:21, always on top)
-      ② 3-D model          (Three.js canvas, z:20, transparent, no pointer events)
-      ③ social buttons     (fixed bottom row, z:15)
-      — hint overlay       (z:25, center of model area)
-      — orbit-target       (z:10, catches OrbitControls drag)
-  */
-
-  /* Three.js canvas — full screen, transparent, passes pointer events through */
-  #c {
-    position: fixed;
-    inset: 0;
-    z-index: 20;
-    pointer-events: none;
+  /* ── Photo background — img+object-fit is reliable on iOS Safari ── */
+  #bg-wrap {
+    position: fixed; inset: 0;
+    z-index: 1; pointer-events: none;
+    overflow: hidden;
+  }
+  #bg-img {
+    width: 100%; height: 100%;
+    object-fit: cover;
+    object-position: center center;
+    display: block;
+  }
+  /* dark warm overlay for legibility */
+  #bg-overlay {
+    position: absolute; inset: 0;
+    background: rgba(18,14,10,0.38);
   }
 
-  /* OrbitControls event-capture div */
+  #c {
+    position: fixed; inset: 0;
+    z-index: 20; pointer-events: none;
+  }
+
   #orbit-target {
-    position: fixed;
-    inset: 0;
-    z-index: 10;
-    cursor: grab;
+    position: fixed; inset: 0;
+    z-index: 10; cursor: grab;
   }
   #orbit-target:active { cursor: grabbing; }
 
-  /* Arc title SVG */
   #arc-svg {
-    position: fixed;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    z-index: 21;
-    pointer-events: none;
-    overflow: visible;
+    position: fixed; inset: 0;
+    width: 100%; height: 100%;
+    z-index: 21; pointer-events: none; overflow: visible;
   }
 
-  /* ── Bottom button row ──────────────────────────── */
+  /* ── Bottom button row — top is set by JS to align with the rings in the bg image ── */
   #btn-track {
     position: fixed;
-    bottom: 11%;
-    left: 0;
-    right: 0;
-    z-index: 15;
-    /* scrollable on very small screens */
+    top: 75%;          /* fallback before JS runs */
+    left: 0; right: 0; z-index: 15;
     overflow-x: auto;
-    overflow-y: hidden;
+    overflow-y: clip;
     -webkit-overflow-scrolling: touch;
     scroll-snap-type: x mandatory;
     scrollbar-width: none;
+    padding: 14px 0;
+    transform: translateY(-50%); /* keep centre of track at the calculated line */
   }
   #btn-track::-webkit-scrollbar { display: none; }
 
   #btn-row {
-    display: flex;
-    align-items: flex-start;
-    justify-content: center;
-    gap: 22px;
-    padding: 0 24px;
-    width: max-content;
-    min-width: 100%;
+    display: flex; align-items: flex-start;
+    justify-content: center; gap: 22px;
+    padding: 0 28px; width: max-content; min-width: 100%;
   }
 
+  /* ── Glass circle button ── */
   .btn-item {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 8px;
-    text-decoration: none;
-    scroll-snap-align: center;
-    flex-shrink: 0;
-    cursor: pointer;
+    display: flex; flex-direction: column;
+    align-items: center; gap: 8px;
+    text-decoration: none; scroll-snap-align: center;
+    flex-shrink: 0; cursor: pointer;
     -webkit-tap-highlight-color: transparent;
   }
 
   .btn-circle {
-    width: 64px;
-    height: 64px;
+    width: 66px; height: 66px;
     border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 24px;
-    color: #ddd;
-    background: rgba(255,255,255,0.07);
-    border: 1.5px solid rgba(255,255,255,0.16);
-    backdrop-filter: blur(10px);
-    transition: background .22s, box-shadow .22s, transform .18s;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px;
+    color: rgba(255,255,255,0.92);
+    position: relative;
+    border: 1px solid rgba(255,255,255,0.18);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    transition: transform .22s cubic-bezier(.34,1.56,.64,1);
+    will-change: transform;
   }
-  .btn-item:hover  .btn-circle,
-  .btn-item:active .btn-circle {
-    background: rgba(255,255,255,0.15);
-    box-shadow: 0 0 22px rgba(255,255,255,0.12);
-    transform: scale(1.08);
+
+  /* specular top-left shine */
+  .btn-circle::before {
+    content: '';
+    position: absolute; top: 7%; left: 10%;
+    width: 44%; height: 32%;
+    background: radial-gradient(ellipse, rgba(255,255,255,0.60) 0%, transparent 78%);
+    border-radius: 50%; pointer-events: none; z-index: 1;
   }
+
+  /* bottom micro-reflection */
+  .btn-circle::after {
+    content: '';
+    position: absolute; bottom: 9%; right: 12%;
+    width: 26%; height: 18%;
+    background: radial-gradient(ellipse, rgba(255,255,255,0.18) 0%, transparent 80%);
+    border-radius: 50%; pointer-events: none; z-index: 1;
+  }
+
+  .btn-circle i { position: relative; z-index: 2; }
+  .btn-item:hover .btn-circle { transform: translateY(-4px) scale(1.07); }
 
   .btn-label {
-    font-size: 10px;
-    letter-spacing: .12em;
+    font-size: 10px; letter-spacing: .12em;
     text-transform: uppercase;
-    color: rgba(255,255,255,0.45);
+    color: rgba(255,255,255,0.55);
     transition: color .22s;
   }
-  .btn-item:hover .btn-label { color: rgba(255,255,255,0.8); }
+  .btn-item:hover .btn-label { color: rgba(255,255,255,0.88); }
 
-  /* ── Hint overlay (no frame, just text + icons) ── */
+  /* ── Bounce / squish on interact ── */
+  @keyframes ball-squish {
+    0%   { transform: scale(1); }
+    18%  { transform: scaleX(1.22) scaleY(0.78); }
+    42%  { transform: scaleX(0.86) scaleY(1.18) translateY(-10px); }
+    65%  { transform: scaleX(1.07) scaleY(0.95) translateY(0); }
+    82%  { transform: scaleX(0.97) scaleY(1.04); }
+    100% { transform: scale(1); }
+  }
+  .btn-circle.popping { animation: ball-squish .5s cubic-bezier(.36,.07,.19,.97) both; }
+
+  /* ── Per-ball dark-glass colors ── */
+  .ball-red {
+    background: radial-gradient(circle at 32% 28%,
+      rgba(255,150,150,0.80) 0%,
+      rgba(180,20,20,0.82)   40%,
+      rgba(75,0,0,0.92)      75%);
+    box-shadow: 0 6px 24px rgba(180,0,0,0.45),
+                inset 0 1px 0 rgba(255,140,140,0.20);
+    border-color: rgba(255,100,100,0.30);
+  }
+  .ball-orange {
+    background: radial-gradient(circle at 32% 28%,
+      rgba(255,210,140,0.80) 0%,
+      rgba(200,80,0,0.82)    40%,
+      rgba(85,25,0,0.92)     75%);
+    box-shadow: 0 6px 24px rgba(190,75,0,0.45),
+                inset 0 1px 0 rgba(255,175,100,0.20);
+    border-color: rgba(255,145,60,0.30);
+  }
+  .ball-yellow {
+    background: radial-gradient(circle at 32% 28%,
+      rgba(255,255,170,0.80) 0%,
+      rgba(190,145,0,0.82)   40%,
+      rgba(80,50,0,0.92)     75%);
+    box-shadow: 0 6px 24px rgba(190,155,0,0.45),
+                inset 0 1px 0 rgba(255,240,110,0.20);
+    border-color: rgba(255,215,40,0.30);
+  }
+  .ball-green {
+    background: radial-gradient(circle at 32% 28%,
+      rgba(160,255,190,0.80) 0%,
+      rgba(0,165,58,0.82)    40%,
+      rgba(0,55,16,0.92)     75%);
+    box-shadow: 0 6px 24px rgba(0,160,55,0.45),
+                inset 0 1px 0 rgba(120,255,155,0.20);
+    border-color: rgba(60,225,110,0.30);
+  }
+
+  /* ── Hint overlay ── */
   #hint {
-    position: fixed;
-    left: 50%;
-    top: 44%;
+    position: fixed; left: 50%; top: 44%;
     transform: translate(-50%, -50%) translateY(14px);
-    z-index: 25;
-    pointer-events: none;
-    text-align: center;
-    opacity: 0;
+    z-index: 25; pointer-events: none;
+    text-align: center; opacity: 0;
     transition: opacity .5s ease, transform .5s ease;
   }
-  #hint.show {
-    opacity: 1;
-    transform: translate(-50%, -50%) translateY(0);
-  }
+  #hint.show { opacity: 1; transform: translate(-50%, -50%) translateY(0); }
 
   .hint-row {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 9px;
-    margin: 5px 0;
+    display: flex; align-items: center;
+    justify-content: center; gap: 9px; margin: 5px 0;
   }
   .hint-row i   { color: rgba(255,255,255,.55); font-size: 13px; }
   .hint-row span {
-    font-size: 11px;
-    letter-spacing: .13em;
-    text-transform: uppercase;
-    color: rgba(255,255,255,.42);
+    font-size: 11px; letter-spacing: .13em;
+    text-transform: uppercase; color: rgba(255,255,255,.42);
   }
 
-  /* animated hand (slide hint) */
   .h-hand { animation: h-swipe 1.3s ease-in-out infinite; }
   @keyframes h-swipe {
     0%,100% { transform: translateX(-8px); opacity:.45; }
     50%     { transform: translateX( 8px); opacity:1;   }
   }
-  /* spinning rotate (model hint) */
   .h-spin { animation: h-rotate 2s linear infinite; }
-  @keyframes h-rotate {
-    from { transform: rotate(0deg); }
-    to   { transform: rotate(360deg); }
-  }
+  @keyframes h-rotate { from { transform:rotate(0deg); } to { transform:rotate(360deg); } }
 
-  /* ── Loading screen ── */
+  /* ── Loading ── */
   #loading {
-    position: fixed;
-    inset: 0;
-    background: #000;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 16px;
-    z-index: 999;
-    transition: opacity .8s;
+    position: fixed; inset: 0; background: rgba(18,14,10,0.88);
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 16px; z-index: 999; transition: opacity .8s;
   }
   #loading.hidden { opacity: 0; pointer-events: none; }
-
   .loading-ring {
     width: 44px; height: 44px;
-    border: 3px solid rgba(255,255,255,.08);
-    border-top-color: rgba(255,255,255,.65);
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
+    border: 3px solid rgba(210,198,172,.10);
+    border-top-color: rgba(210,198,172,.70);
+    border-radius: 50%; animation: spin 1s linear infinite;
   }
   @keyframes spin { to { transform: rotate(360deg); } }
-
   .loading-text {
-    font-size: 12px;
-    letter-spacing: .22em;
-    text-transform: uppercase;
-    color: rgba(255,255,255,.38);
+    font-size: 12px; letter-spacing: .22em;
+    text-transform: uppercase; color: rgba(210,198,172,.45);
   }
 
-  /* ── Footer ── */
+  /* ── Footer — top set by JS to sit below the rings ── */
   #footer {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    z-index: 15;
-    text-align: center;
-    padding: 10px 0 calc(10px + env(safe-area-inset-bottom));
+    position: fixed; top: 80%; left: 0; right: 0;
+    z-index: 15; text-align: center;
+    padding: 6px 0;
   }
-
   #footer a {
-    font-size: 11px;
-    letter-spacing: .1em;
-    text-transform: uppercase;
-    color: rgba(255,255,255,.3);
-    text-decoration: none;
-    transition: color .25s;
+    font-size: 11px; letter-spacing: .12em;
+    text-transform: uppercase; text-decoration: none;
+    font-weight: 700;
+    color: #FFD700;
+    animation: footer-glow 2.8s ease-in-out infinite alternate;
   }
-  #footer a:hover { color: rgba(255,255,255,.75); }
+  @keyframes footer-glow {
+    from { text-shadow: 0 0 4px rgba(255,215,0,0.4); }
+    to   { text-shadow: 0 0 14px rgba(255,215,0,0.95), 0 0 28px rgba(255,200,0,0.4); }
+  }
 
   @media (max-width: 430px) {
-    .btn-circle { width: 54px; height: 54px; font-size: 20px; }
+    .btn-circle { width: 54px; height: 54px; font-size: 19px; }
     .btn-label  { font-size: 8px; }
     #btn-row    { gap: 16px; }
   }
@@ -242,21 +262,31 @@
 </head>
 <body>
 
-<!-- Loading -->
+<!-- photo background — img+object-fit for correct iOS sizing -->
+<div id="bg-wrap">
+  <img id="bg-img"
+       src="https://raw.githubusercontent.com/lokanoka/bdrspen-assets/refs/heads/main/bdrspen-bg.jpg.png"
+       alt="" aria-hidden="true" fetchpriority="high">
+  <div id="bg-overlay"></div>
+</div>
+
 <div id="loading">
   <div class="loading-ring"></div>
   <span class="loading-text">loading</span>
 </div>
 
-<!-- Three.js canvas (model, transparent, top layer) -->
 <canvas id="c"></canvas>
-
-<!-- OrbitControls catch div -->
 <div id="orbit-target"></div>
 
-<!-- ① Arc title (SVG textPath) -->
+<!-- Arc title — gradient yellow→orange like the sun -->
 <svg id="arc-svg" aria-hidden="true">
-  <defs><path id="arc-path" d="" fill="none"/></defs>
+  <defs>
+    <path id="arc-path" d="" fill="none"/>
+    <!-- shadow so yellow stays legible on white bg half -->
+    <filter id="txt-shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="0" stdDeviation="3" flood-color="rgba(0,0,0,0.55)"/>
+    </filter>
+  </defs>
   <text id="arc-text-el" text-anchor="middle" dominant-baseline="auto">
     <textPath href="#arc-path" startOffset="50%">
       <tspan id="typing-text"></tspan>
@@ -264,43 +294,36 @@
   </text>
 </svg>
 
-<!-- ③ Social buttons — horizontal row below model -->
+<!-- Social buttons — colored glass balls -->
 <div id="btn-track">
   <div id="btn-row">
-
     <a class="btn-item" href="https://www.instagram.com/bdrspen"
        target="_blank" rel="noopener" aria-label="Instagram">
-      <div class="btn-circle"><i class="fab fa-instagram"></i></div>
+      <div class="btn-circle ball-red"><i class="fab fa-instagram"></i></div>
       <span class="btn-label">Instagram</span>
     </a>
-
     <a class="btn-item" href="https://www.pinterest.com/bdrspen"
        target="_blank" rel="noopener" aria-label="Pinterest">
-      <div class="btn-circle"><i class="fab fa-pinterest"></i></div>
+      <div class="btn-circle ball-orange"><i class="fab fa-pinterest"></i></div>
       <span class="btn-label">Pinterest</span>
     </a>
-
     <a class="btn-item" href="https://www.tiktok.com/@bdrspen"
        target="_blank" rel="noopener" aria-label="TikTok">
-      <div class="btn-circle"><i class="fab fa-tiktok"></i></div>
+      <div class="btn-circle ball-yellow"><i class="fab fa-tiktok"></i></div>
       <span class="btn-label">TikTok</span>
     </a>
-
     <a class="btn-item" href="https://upscrolled.com/bdrspen"
        target="_blank" rel="noopener" aria-label="Upscrolled">
-      <div class="btn-circle"><i class="fa-solid fa-scroll"></i></div>
+      <div class="btn-circle ball-green"><i class="fa-solid fa-scroll"></i></div>
       <span class="btn-label">Upscrolled</span>
     </a>
-
   </div>
 </div>
 
-<!-- Footer -->
 <footer id="footer">
   <a href="mailto:workido997@gmail.com">contact me here</a>
 </footer>
 
-<!-- Hint overlay — both lines together, no frame, over the model -->
 <div id="hint" role="status" aria-live="polite">
   <div class="hint-row">
     <i class="fa-solid fa-hand-pointer h-hand"></i>
@@ -319,7 +342,7 @@ import { OrbitControls }   from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader }      from 'three/addons/loaders/GLTFLoader.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 
-// ── Renderer (transparent canvas) ─────────────────────────
+// ── Renderer ──────────────────────────────────────────────
 const canvas   = document.getElementById('c');
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
@@ -330,11 +353,9 @@ renderer.outputColorSpace    = THREE.SRGBColorSpace;
 
 // ── Scene ─────────────────────────────────────────────────
 const scene = new THREE.Scene();
-
 const pmrem = new THREE.PMREMGenerator(renderer);
 scene.environment = pmrem.fromScene(new RoomEnvironment()).texture;
 pmrem.dispose();
-
 scene.add(new THREE.AmbientLight(0xffffff, 0.12));
 
 // ── Camera ────────────────────────────────────────────────
@@ -343,15 +364,44 @@ camera.position.set(0, 0, 7);
 
 // ── OrbitControls ─────────────────────────────────────────
 const controls = new OrbitControls(camera, document.getElementById('orbit-target'));
+controls.target.set(0, 0.15, 0);
 controls.enableDamping   = true;
 controls.dampingFactor   = 0.08;
 controls.minDistance     = 2;
 controls.maxDistance     = 14;
 controls.autoRotate      = false;
 
-// ── Animation mixer ───────────────────────────────────────
 const clock = new THREE.Clock();
 let   mixer = null;
+
+// ── White surface flicker ──────────────────────────────────
+let sparkMats = [];
+let sparkTime = 0;
+
+// ── Ball spark trail ───────────────────────────────────────
+const TRAIL_MAX  = 180;
+let   trailHead  = 0;
+const trailPos   = new Float32Array(TRAIL_MAX * 3).fill(9999);
+const trailCol   = new Float32Array(TRAIL_MAX * 3);
+const trailLife  = new Float32Array(TRAIL_MAX);
+const trailVel   = Array.from({length: TRAIL_MAX}, () => new THREE.Vector3());
+let   ballObjects = [];   // white ball meshes found in model
+
+const trailGeo = new THREE.BufferGeometry();
+trailGeo.setAttribute('position', new THREE.BufferAttribute(trailPos, 3));
+trailGeo.setAttribute('color',    new THREE.BufferAttribute(trailCol, 3));
+
+const trailMat = new THREE.PointsMaterial({
+  size: 0.055,
+  vertexColors: true,
+  transparent: true,
+  opacity: 0.92,
+  blending: THREE.AdditiveBlending,
+  depthWrite: false,
+  sizeAttenuation: true,
+});
+const trailPoints = new THREE.Points(trailGeo, trailMat);
+scene.add(trailPoints);
 
 // ── Load model ────────────────────────────────────────────
 const loadingEl   = document.getElementById('loading');
@@ -365,37 +415,57 @@ new GLTFLoader(manager).load(
   'https://raw.githubusercontent.com/lokanoka/bdrspen-assets/refs/heads/main/bdrspen-model.glb',
   ({ scene: model, animations }) => {
 
-    const box    = new THREE.Box3().setFromObject(model);
-    const center = box.getCenter(new THREE.Vector3());
-    const size   = box.getSize(new THREE.Vector3());
-    model.position.sub(center);
+    // Scale first, then center
+    const box1 = new THREE.Box3().setFromObject(model);
+    const size = box1.getSize(new THREE.Vector3());
     model.scale.setScalar(3.4 / Math.max(size.x, size.y, size.z));
 
-    // Shift model up slightly so it sits between title and buttons
-    model.position.y += 0.18;
+    const box2   = new THREE.Box3().setFromObject(model);
+    const center = box2.getCenter(new THREE.Vector3());
+    model.position.sub(center);
 
     model.traverse(child => {
       if (!child.isMesh) return;
       const mats = Array.isArray(child.material) ? child.material : [child.material];
       mats.forEach(m => {
+        // Boost existing orange emission from Blender
         if (m.emissive && m.emissive.r + m.emissive.g + m.emissive.b > 0.01)
           m.emissiveIntensity = Math.min(m.emissiveIntensity * 2, 3);
+
+        // Collect light/white surfaces for flicker
+        if (m.color && m.color.r > 0.55 && m.color.g > 0.55 && m.color.b > 0.55) {
+          if (!m.emissive) m.emissive = new THREE.Color(0xffffff);
+          else m.emissive.set(0xffffff);
+          m.emissiveIntensity = 0.18;
+          sparkMats.push(m);
+        }
       });
+
+      // Identify small spherical white-ball meshes for spark trail
+      if (child.geometry) {
+        const bbox = new THREE.Box3().setFromObject(child);
+        const sz   = bbox.getSize(new THREE.Vector3());
+        const mx   = Math.max(sz.x, sz.y, sz.z);
+        const mn   = Math.min(sz.x, sz.y, sz.z);
+        const mat  = Array.isArray(child.material) ? child.material[0] : child.material;
+        const isLight = mat && mat.color &&
+                        mat.color.r > 0.5 && mat.color.g > 0.5 && mat.color.b > 0.5;
+        const isSmall  = mx < 0.6;   // small object in model-space
+        const isRound  = mn / mx > 0.55; // roughly spherical
+        if (isLight && isSmall && isRound) ballObjects.push(child);
+      }
     });
 
     scene.add(model);
 
     if (animations && animations.length > 0) {
       mixer = new THREE.AnimationMixer(model);
-      mixer.timeScale = 0.35;
       animations.forEach(clip => mixer.clipAction(clip).play());
     }
   },
   xhr => {
-    if (xhr.lengthComputable) {
-      const pct = Math.round(xhr.loaded / xhr.total * 100);
-      loadingText.textContent = `loading ${pct}%`;
-    }
+    if (xhr.lengthComputable)
+      loadingText.textContent = `loading ${Math.round(xhr.loaded / xhr.total * 100)}%`;
   },
   err => {
     console.error(err);
@@ -410,17 +480,48 @@ window.addEventListener('resize', () => {
   camera.updateProjectionMatrix();
   renderer.setSize(innerWidth, innerHeight);
   updateArcPath();
+  alignButtonsToRings();
 });
 
-// ────────────────────────────────────────────────────────────
-// ARC TITLE  — bdrspen curves over the top of the model
-// ────────────────────────────────────────────────────────────
+// ── Align buttons to the ring area in the background image ──
+// Original image dimensions
+const BG_IMG_W = 1694;
+const BG_IMG_H = 2528;
+// Where the centre of the 4 rings sits in the original image (0–1)
+const RINGS_Y  = 0.805;  // ~80.5% from top = y≈2035 in the 2528px image
+
+const btnTrack  = document.getElementById('btn-track');
+const footerEl  = document.getElementById('footer');
+
+function alignButtonsToRings() {
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+
+  // object-fit:cover scale
+  const scale   = Math.max(vw / BG_IMG_W, vh / BG_IMG_H);
+
+  // Pixels of image that extend above the viewport top edge
+  const offsetY = (BG_IMG_H * scale - vh) / 2;
+
+  // Screen Y where the ring centre lands
+  const ringScreenY = BG_IMG_H * RINGS_Y * scale - offsetY;
+
+  // Centre the button track on that line
+  btnTrack.style.top    = ringScreenY + 'px';
+  btnTrack.style.bottom = 'auto';
+
+  // Footer sits 14px below the bottom of the track (track height ≈ 100px with padding)
+  footerEl.style.top    = (ringScreenY + 64) + 'px';
+  footerEl.style.bottom = 'auto';
+}
+alignButtonsToRings();
+
+// ── Arc title ─────────────────────────────────────────────
 const arcPathEl = document.getElementById('arc-path');
 const arcTextEl = document.getElementById('arc-text-el');
 const typingEl  = document.getElementById('typing-text');
 
 function getR() {
-  // radius that sits just above the model's top edge
   return Math.min(innerWidth * 0.38, innerHeight * 0.27, 250);
 }
 
@@ -428,72 +529,51 @@ function updateArcPath() {
   const cx = innerWidth  / 2;
   const cy = innerHeight / 2;
   const R  = getR();
-
-  // Pure circle arc, -162° → -18° (144° sweep = strong half-circle curve)
   const a1 = -162 * Math.PI / 180;
   const a2 =  -18 * Math.PI / 180;
-  const x1 = cx + R * Math.cos(a1);
-  const y1 = cy + R * Math.sin(a1);
-  const x2 = cx + R * Math.cos(a2);
-  const y2 = cy + R * Math.sin(a2);
+  arcPathEl.setAttribute('d',
+    `M ${cx+R*Math.cos(a1)} ${cy+R*Math.sin(a1)} A ${R} ${R} 0 0 1 ${cx+R*Math.cos(a2)} ${cy+R*Math.sin(a2)}`);
 
-  arcPathEl.setAttribute('d', `M ${x1} ${y1} A ${R} ${R} 0 0 1 ${x2} ${y2}`);
-
-  const fs = Math.max(13, Math.min(19, innerWidth * 0.016));
-  const ls = Math.max(7,  Math.min(13, innerWidth * 0.011));
-  arcTextEl.setAttribute('font-size',      fs);
-  arcTextEl.setAttribute('letter-spacing', ls);
-  arcTextEl.setAttribute('fill',           '#ffffff');
+  arcTextEl.setAttribute('font-size',      Math.max(13, Math.min(19, innerWidth * 0.016)));
+  arcTextEl.setAttribute('letter-spacing', Math.max(7,  Math.min(13, innerWidth * 0.011)));
+  arcTextEl.setAttribute('fill',           '#FFD700');
+  arcTextEl.setAttribute('filter',         'url(#txt-shadow)');
   arcTextEl.setAttribute('font-family',    "'Segoe UI', system-ui, sans-serif");
   arcTextEl.setAttribute('font-weight',    '700');
 }
 updateArcPath();
 
-// ────────────────────────────────────────────────────────────
-// TYPEWRITER on the arc
-// ────────────────────────────────────────────────────────────
-const WORD   = 'bdrspen';
-let charIdx  = 0;
-let erasing  = false;
-let cursorOn = true;
-
+// ── Typewriter ────────────────────────────────────────────
+const WORD  = 'bdrspen';
+let charIdx = 0, erasing = false, cursorOn = true;
 setInterval(() => { cursorOn = !cursorOn; redraw(); }, 530);
-
-function redraw() {
-  typingEl.textContent = WORD.slice(0, charIdx) + (cursorOn ? '|' : '\u00a0');
-}
-
+function redraw() { typingEl.textContent = WORD.slice(0, charIdx) + (cursorOn ? '|' : '\u00a0'); }
 function tick() {
   if (!erasing) {
-    charIdx++;
-    redraw();
-    if (charIdx >= WORD.length) {
-      setTimeout(() => { erasing = true; tick(); }, 2100);
-      return;
-    }
+    redraw(); charIdx++;
+    if (charIdx > WORD.length) { charIdx = WORD.length; setTimeout(() => { erasing = true; tick(); }, 2100); return; }
     setTimeout(tick, 115);
   } else {
-    charIdx--;
-    redraw();
-    if (charIdx <= 0) {
-      charIdx = 0;
-      erasing = false;
-      setTimeout(tick, 480);
-      return;
-    }
+    charIdx--; redraw();
+    if (charIdx <= 0) { charIdx = 0; erasing = false; setTimeout(tick, 480); return; }
     setTimeout(tick, 72);
   }
 }
 setTimeout(tick, 700);
 
-// ────────────────────────────────────────────────────────────
-// TUTORIAL HINT  — both lines together, no frame, over model
-// Shows every 7 s, dismissed on first interaction
-// ────────────────────────────────────────────────────────────
-const hintEl   = document.getElementById('hint');
-let dismissed  = false;
-let hintTimer  = null;
+// ── Ball squish / bounce on interaction ───────────────────
+document.querySelectorAll('.btn-circle').forEach(ball => {
+  ball.addEventListener('pointerdown', () => {
+    ball.classList.remove('popping');
+    void ball.offsetWidth;
+    ball.classList.add('popping');
+  });
+  ball.addEventListener('animationend', () => ball.classList.remove('popping'));
+});
 
+// ── Tutorial hint ─────────────────────────────────────────
+const hintEl  = document.getElementById('hint');
+let dismissed = false, hintTimer = null;
 function showHint() {
   if (dismissed) return;
   hintEl.classList.add('show');
@@ -502,20 +582,68 @@ function showHint() {
     if (!dismissed) hintTimer = setTimeout(showHint, 7000);
   }, 3500);
 }
-
 hintTimer = setTimeout(showHint, 2200);
-
 document.addEventListener('pointerdown', () => {
-  dismissed = true;
-  clearTimeout(hintTimer);
-  hintEl.classList.remove('show');
+  dismissed = true; clearTimeout(hintTimer); hintEl.classList.remove('show');
 }, { once: true });
 
 // ── Render loop ───────────────────────────────────────────
+const _wp = new THREE.Vector3(); // reused world-position vector
+
 (function animate() {
   requestAnimationFrame(animate);
   const delta = clock.getDelta();
+  sparkTime += delta;
+
+  // White surface flicker
+  sparkMats.forEach((m, i) => {
+    const phase = sparkTime * 2.8 + i * 1.3;
+    const base  = 0.18 + Math.sin(phase) * 0.09;
+    const flash = Math.random() < 0.004 ? 1.2 : 0;
+    m.emissiveIntensity = base + flash;
+  });
+
+  // Ball spark trail — emit from each white ball's world position
   if (mixer) mixer.update(delta);
+
+  ballObjects.forEach(obj => {
+    obj.getWorldPosition(_wp);
+    // Emit 2 sparks per frame per ball
+    for (let e = 0; e < 2; e++) {
+      const i = trailHead % TRAIL_MAX;
+      trailPos[i*3]   = _wp.x + (Math.random()-0.5)*0.02;
+      trailPos[i*3+1] = _wp.y + (Math.random()-0.5)*0.02;
+      trailPos[i*3+2] = _wp.z + (Math.random()-0.5)*0.02;
+      trailLife[i]    = 1.0;
+      trailVel[i].set(
+        (Math.random()-0.5)*0.055,
+        Math.random()*0.05 + 0.01,
+        (Math.random()-0.5)*0.055
+      );
+      trailHead++;
+    }
+  });
+
+  // Update all trail particles
+  for (let j = 0; j < TRAIL_MAX; j++) {
+    if (trailLife[j] > 0) {
+      trailLife[j] -= delta * 1.6;
+      const l = Math.max(0, trailLife[j]);
+      trailPos[j*3]   += trailVel[j].x;
+      trailPos[j*3+1] += trailVel[j].y - 0.003; // gentle gravity
+      trailPos[j*3+2] += trailVel[j].z;
+      // Orange→red fade: full orange at birth, red as it dies
+      trailCol[j*3]   = l * 1.0;           // R
+      trailCol[j*3+1] = l * l * 0.55;      // G (quadratic → orange tip, red tail)
+      trailCol[j*3+2] = 0;                  // B
+      if (trailLife[j] <= 0) {
+        trailPos[j*3] = trailPos[j*3+1] = trailPos[j*3+2] = 9999; // hide
+      }
+    }
+  }
+  trailGeo.attributes.position.needsUpdate = true;
+  trailGeo.attributes.color.needsUpdate    = true;
+
   controls.update();
   renderer.render(scene, camera);
 })();
