@@ -8,7 +8,7 @@
 <link rel="stylesheet"
   href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
 <link rel="stylesheet"
-  href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" />
+  href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Cairo:wght@700&display=swap" />
 
 <script async src="https://unpkg.com/es-module-shims@1.10.0/dist/es-module-shims.js"></script>
 
@@ -25,14 +25,7 @@
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
   body {
-    background:
-      /* dark green → near-black depth well in the centre */
-      radial-gradient(ellipse 70% 60% at 50% 50%,
-        #000000          0%,
-        #010d02         25%,
-        #021505         50%,
-        #030a04         75%,
-        #030a04        100%);
+    background: #F5F5F0;
     background-attachment: fixed;
     overflow: hidden;
     font-family: 'Segoe UI', system-ui, sans-serif;
@@ -52,17 +45,41 @@
   }
   #orbit-target:active { cursor: grabbing; }
 
-  #arc-svg {
-    position: fixed; inset: 0;
-    width: 100%; height: 100%;
-    z-index: 21; pointer-events: none; overflow: visible;
+  #arc-svg { display: none; }
+
+  /* ── Name text behind model ── */
+  #name-text {
+    position: fixed;
+    bottom: 16%;
+    left: 0; right: 0;
+    z-index: 12;
+    text-align: center;
+    pointer-events: none;
+    padding: 0 16px;
+  }
+  #en-name {
+    font-family: 'Fredoka One', cursive;
+    font-size: clamp(2.2rem, 9vw, 4rem);
+    color: #007A3D;
+    line-height: 1.3;
+    letter-spacing: 0.03em;
+    text-shadow: 2px 2px 0 rgba(0,0,0,0.12);
+  }
+  #ar-name {
+    font-family: 'Cairo', sans-serif;
+    font-size: clamp(1.4rem, 6vw, 2.6rem);
+    color: #007A3D;
+    line-height: 1.6;
+    direction: rtl;
+    font-weight: 700;
+    text-shadow: 2px 2px 0 rgba(0,0,0,0.12);
   }
 
   /* ── Bottom button row ── */
   #btn-track {
     position: fixed;
-    bottom: 10%;
-    left: 0; right: 0; z-index: 15;
+    top: 14px;
+    left: 0; right: 0; z-index: 25;
     overflow-x: auto;
     overflow-y: clip;
     -webkit-overflow-scrolling: touch;
@@ -80,8 +97,8 @@
 
   /* ── Glass circle button ── */
   .btn-item {
-    display: flex; flex-direction: column;
-    align-items: center; gap: 8px;
+    display: flex; flex-direction: column-reverse;
+    align-items: center; gap: 6px;
     text-decoration: none; scroll-snap-align: center;
     flex-shrink: 0; cursor: pointer;
     -webkit-tap-highlight-color: transparent;
@@ -99,6 +116,8 @@
     -webkit-backdrop-filter: blur(8px);
     transition: transform .22s cubic-bezier(.34,1.56,.64,1);
     will-change: transform;
+    /* 5-petal rounded flower */
+    clip-path: url(#flower-clip);
   }
 
   /* specular top-left shine */
@@ -125,10 +144,10 @@
   .btn-label {
     font-size: 10px; letter-spacing: .12em;
     text-transform: uppercase;
-    color: rgba(255,255,255,0.55);
+    color: rgba(0,0,0,0.50);
     transition: color .22s;
   }
-  .btn-item:hover .btn-label { color: rgba(255,255,255,0.88); }
+  .btn-item:hover .btn-label { color: rgba(0,0,0,0.85); }
 
   /* ── Bounce / squish on interact ── */
   @keyframes ball-squish {
@@ -141,46 +160,47 @@
   }
   .btn-circle.popping { animation: ball-squish .5s cubic-bezier(.36,.07,.19,.97) both; }
 
-  /* ── Per-ball dark-glass colors ── */
-  /* Instagram = yellow */
+  /* ── Per-ball Kuwait flag colors ── */
+  /* Instagram = Kuwait Green */
   .ball-yellow {
     background: radial-gradient(circle at 32% 28%,
-      rgba(255,255,170,0.80) 0%,
-      rgba(210,165,0,0.85)   40%,
-      rgba(90,60,0,0.92)     75%);
-    box-shadow: 0 3px 10px rgba(210,175,0,0.20),
-                inset 0 1px 0 rgba(255,245,120,0.15);
-    border-color: rgba(255,220,40,0.22);
+      rgba(100,200,140,0.90) 0%,
+      rgba(0,122,61,0.92)    40%,
+      rgba(0,45,22,0.96)     75%);
+    box-shadow: 0 3px 10px rgba(0,122,61,0.30),
+                inset 0 1px 0 rgba(100,200,140,0.20);
+    border-color: rgba(0,122,61,0.40);
   }
-  /* Pinterest = deep model blue */
+  /* Pinterest = Kuwait White */
   .ball-blue {
     background: radial-gradient(circle at 32% 28%,
-      rgba(140,190,255,0.80) 0%,
-      rgba(0,80,210,0.85)    40%,
-      rgba(0,18,90,0.92)     75%);
-    box-shadow: 0 3px 10px rgba(0,90,220,0.22),
-                inset 0 1px 0 rgba(140,190,255,0.18);
-    border-color: rgba(80,150,255,0.25);
+      rgba(255,255,255,0.98) 0%,
+      rgba(225,225,225,0.92) 40%,
+      rgba(175,175,175,0.88) 75%);
+    box-shadow: 0 3px 12px rgba(0,0,0,0.15),
+                inset 0 1px 0 rgba(255,255,255,0.60);
+    border-color: rgba(180,180,180,0.45);
+    color: rgba(0,0,0,0.75);
   }
-  /* TikTok = red */
+  /* TikTok = Kuwait Red */
   .ball-red {
     background: radial-gradient(circle at 32% 28%,
-      rgba(255,150,150,0.80) 0%,
-      rgba(200,15,15,0.85)   40%,
-      rgba(80,0,0,0.92)      75%);
-    box-shadow: 0 3px 10px rgba(200,0,0,0.20),
-                inset 0 1px 0 rgba(255,140,140,0.15);
-    border-color: rgba(255,90,90,0.22);
+      rgba(255,110,120,0.88) 0%,
+      rgba(206,17,38,0.92)   40%,
+      rgba(80,0,15,0.96)     75%);
+    box-shadow: 0 3px 10px rgba(206,17,38,0.28),
+                inset 0 1px 0 rgba(255,110,120,0.20);
+    border-color: rgba(206,17,38,0.40);
   }
-  /* Upscrolled = green (unchanged) */
+  /* Upscrolled = Kuwait Black */
   .ball-green {
     background: radial-gradient(circle at 32% 28%,
-      rgba(160,255,190,0.80) 0%,
-      rgba(0,165,58,0.82)    40%,
-      rgba(0,55,16,0.92)     75%);
-    box-shadow: 0 3px 10px rgba(0,160,55,0.20),
-                inset 0 1px 0 rgba(120,255,155,0.15);
-    border-color: rgba(60,225,110,0.22);
+      rgba(110,110,110,0.85) 0%,
+      rgba(25,25,25,0.92)    40%,
+      rgba(0,0,0,0.97)       75%);
+    box-shadow: 0 3px 10px rgba(0,0,0,0.35),
+                inset 0 1px 0 rgba(150,150,150,0.18);
+    border-color: rgba(80,80,80,0.35);
   }
 
   /* ── Hint overlay ── */
@@ -197,10 +217,10 @@
     display: flex; align-items: center;
     justify-content: center; gap: 9px; margin: 5px 0;
   }
-  .hint-row i   { color: rgba(255,255,255,.55); font-size: 13px; }
+  .hint-row i   { color: rgba(0,0,0,.45); font-size: 13px; }
   .hint-row span {
     font-size: 11px; letter-spacing: .13em;
-    text-transform: uppercase; color: rgba(255,255,255,.42);
+    text-transform: uppercase; color: rgba(0,0,0,.38);
   }
 
   .h-hand { animation: h-swipe 1.3s ease-in-out infinite; }
@@ -211,39 +231,37 @@
   .h-spin { animation: h-rotate 2s linear infinite; }
   @keyframes h-rotate { from { transform:rotate(0deg); } to { transform:rotate(360deg); } }
 
-  /* ── Loading ── */
+  /* ── Loading ── flower draw animation */
   #loading {
-    position: fixed; inset: 0; background: rgba(18,14,10,0.88);
+    position: fixed; left: 50%; top: 50%;
+    transform: translate(-50%, -50%);
     display: flex; flex-direction: column;
-    align-items: center; justify-content: center;
-    gap: 16px; z-index: 999; transition: opacity .8s;
+    align-items: center; gap: 6px;
+    z-index: 999; transition: opacity .7s;
   }
   #loading.hidden { opacity: 0; pointer-events: none; }
-  .loading-ring {
-    width: 44px; height: 44px;
-    border: 3px solid rgba(210,198,172,.10);
-    border-top-color: rgba(210,198,172,.70);
-    border-radius: 50%; animation: spin 1s linear infinite;
+  #rose-path {
+    transition: stroke-dashoffset 0.3s ease;
   }
-  @keyframes spin { to { transform: rotate(360deg); } }
   .loading-text {
-    font-size: 12px; letter-spacing: .22em;
-    text-transform: uppercase; color: rgba(210,198,172,.45);
+    font-family: 'Fredoka One', cursive;
+    font-size: 15px; color: #007A3D;
+    letter-spacing: 0.05em;
   }
 
   /* ── Footer ── */
   #footer {
     position: fixed; bottom: 0; left: 0; right: 0;
-    z-index: 15; text-align: center;
+    z-index: 25; text-align: center;
     padding: 10px 0 calc(10px + env(safe-area-inset-bottom));
   }
   #footer a {
     font-size: 11px; letter-spacing: .12em;
     text-transform: uppercase; text-decoration: none;
     font-weight: 700;
-    color: #FFD700;
+    color: #007A3D;
     display: inline-block; /* needed so translateY works */
-    text-shadow: 0 0 6px rgba(255,215,0,0.5);
+    text-shadow: 0 0 6px rgba(0,122,61,0.35);
     animation: pick-me 3s ease-in-out infinite;
   }
   @keyframes pick-me {
@@ -267,14 +285,37 @@
 
 
 <div id="loading">
-  <div class="loading-ring"></div>
-  <span class="loading-text">loading</span>
+  <svg viewBox="0 0 100 100" width="120" height="120">
+    <path id="rose-path" fill="none" stroke="#007A3D" stroke-width="2.2"
+          stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>
+  <span class="loading-text">0%</span>
 </div>
+
+<!-- Flower clip-path definition -->
+<svg width="0" height="0" style="position:absolute;overflow:hidden">
+  <defs>
+    <clipPath id="flower-clip" clipPathUnits="objectBoundingBox">
+      <ellipse cx="0.5" cy="0.2"  rx="0.19" ry="0.31"/>
+      <ellipse cx="0.5" cy="0.2"  rx="0.19" ry="0.31" transform="rotate(72,0.5,0.5)"/>
+      <ellipse cx="0.5" cy="0.2"  rx="0.19" ry="0.31" transform="rotate(144,0.5,0.5)"/>
+      <ellipse cx="0.5" cy="0.2"  rx="0.19" ry="0.31" transform="rotate(216,0.5,0.5)"/>
+      <ellipse cx="0.5" cy="0.2"  rx="0.19" ry="0.31" transform="rotate(288,0.5,0.5)"/>
+      <circle cx="0.5" cy="0.5" r="0.17"/>
+    </clipPath>
+  </defs>
+</svg>
 
 <canvas id="c"></canvas>
 <div id="orbit-target"></div>
 
-<!-- Arc title — gradient yellow→orange like the sun -->
+<!-- Name text — behind 3D model (z-index 12 < canvas z-index 20) -->
+<div id="name-text">
+  <div id="en-name"><span id="typing-en"></span></div>
+  <div id="ar-name"><span id="typing-ar"></span></div>
+</div>
+
+<!-- Arc SVG kept for structure but hidden -->
 <svg id="arc-svg" aria-hidden="true">
   <defs>
     <path id="arc-path" d="" fill="none"/>
@@ -338,21 +379,24 @@ import { OrbitControls }   from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader }      from 'three/addons/loaders/GLTFLoader.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 
+THREE.Cache.enabled = true; // cache model for repeat visits
+
 // ── Renderer ──────────────────────────────────────────────
 const canvas   = document.getElementById('c');
-const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
-renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: false, alpha: true, powerPreference: 'high-performance' });
+renderer.setPixelRatio(1);
 renderer.setSize(innerWidth, innerHeight);
-renderer.toneMapping         = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.2;
+renderer.toneMapping         = THREE.LinearToneMapping;
+renderer.toneMappingExposure = 1.1;
 renderer.outputColorSpace    = THREE.SRGBColorSpace;
 
 // ── Scene ─────────────────────────────────────────────────
 const scene = new THREE.Scene();
 const pmrem = new THREE.PMREMGenerator(renderer);
 scene.environment = pmrem.fromScene(new RoomEnvironment()).texture;
+scene.environmentIntensity = 0.9;
 pmrem.dispose();
-scene.add(new THREE.AmbientLight(0xffffff, 0.12));
+scene.add(new THREE.AmbientLight(0xffffff, 0.5));
 
 // ── Camera ────────────────────────────────────────────────
 const camera = new THREE.PerspectiveCamera(45, innerWidth / innerHeight, 0.1, 1000);
@@ -375,7 +419,7 @@ let sparkMats = [];
 let sparkTime = 0;
 
 // ── Ball spark trail ───────────────────────────────────────
-const TRAIL_MAX  = 180;
+const TRAIL_MAX  = 90;
 let   trailHead  = 0;
 const trailPos   = new Float32Array(TRAIL_MAX * 3).fill(9999);
 const trailCol   = new Float32Array(TRAIL_MAX * 3);
@@ -402,13 +446,38 @@ scene.add(trailPoints);
 // ── Load model ────────────────────────────────────────────
 const loadingEl   = document.getElementById('loading');
 const loadingText = loadingEl.querySelector('.loading-text');
-const safetyTimer = setTimeout(() => loadingEl.classList.add('hidden'), 15000);
 
+// ── Rose path: r = cos(2.5t), t in [0, 4π] ──────────────
+const roseSvgPath = document.getElementById('rose-path');
+{ let d = '';
+  for (let i = 0; i <= 300; i++) {
+    const t = (i / 300) * 4 * Math.PI;
+    const r = 40 * Math.cos(2.5 * t);
+    const x = (50 + r * Math.cos(t)).toFixed(2);
+    const y = (50 + r * Math.sin(t)).toFixed(2);
+    d += (i === 0 ? 'M' : 'L') + x + ',' + y + ' ';
+  }
+  roseSvgPath.setAttribute('d', d.trim());
+}
+const roseLen = roseSvgPath.getTotalLength();
+roseSvgPath.style.strokeDasharray  = roseLen;
+roseSvgPath.style.strokeDashoffset = roseLen;
+
+function setFlowerProgress(pct) {
+  roseSvgPath.style.strokeDashoffset = roseLen * (1 - pct / 100);
+  loadingText.textContent = Math.round(pct) + '%';
+}
+
+const safetyTimer = setTimeout(() => loadingEl.classList.add('hidden'), 120000);
 const manager  = new THREE.LoadingManager();
-manager.onLoad = () => { clearTimeout(safetyTimer); loadingEl.classList.add('hidden'); };
+manager.onLoad = () => {
+  clearTimeout(safetyTimer);
+  setFlowerProgress(100);
+  setTimeout(() => loadingEl.classList.add('hidden'), 600);
+};
 
 new GLTFLoader(manager).load(
-  'https://raw.githubusercontent.com/lokanoka/bdrspen-assets/refs/heads/main/bdrspen-model.glb',
+  'https://huggingface.co/datasets/workib2/b2/resolve/main/bdrspen-model.glb',
   ({ scene: model, animations }) => {
 
     // Scale first, then center
@@ -461,7 +530,7 @@ new GLTFLoader(manager).load(
   },
   xhr => {
     if (xhr.lengthComputable)
-      loadingText.textContent = `loading ${Math.round(xhr.loaded / xhr.total * 100)}%`;
+      setFlowerProgress(xhr.loaded / xhr.total * 100);
   },
   err => {
     console.error(err);
@@ -475,54 +544,42 @@ window.addEventListener('resize', () => {
   camera.aspect = innerWidth / innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(innerWidth, innerHeight);
-  updateArcPath();
 });
 
 
-// ── Arc title ─────────────────────────────────────────────
-const arcPathEl = document.getElementById('arc-path');
-const arcTextEl = document.getElementById('arc-text-el');
-const typingEl  = document.getElementById('typing-text');
+// ── Typewriter (English + Arabic) ────────────────────────
+const enEl = document.getElementById('typing-en');
+const arEl = document.getElementById('typing-ar');
 
-function getR() {
-  return Math.min(innerWidth * 0.38, innerHeight * 0.27, 250);
-}
+let cursorOn = true;
+setInterval(() => { cursorOn = !cursorOn; }, 530);
 
-function updateArcPath() {
-  const cx = innerWidth  / 2;
-  const cy = innerHeight / 2;
-  const R  = getR();
-  const a1 = -162 * Math.PI / 180;
-  const a2 =  -18 * Math.PI / 180;
-  arcPathEl.setAttribute('d',
-    `M ${cx+R*Math.cos(a1)} ${cy+R*Math.sin(a1)} A ${R} ${R} 0 0 1 ${cx+R*Math.cos(a2)} ${cy+R*Math.sin(a2)}`);
-
-  arcTextEl.setAttribute('font-size',      Math.max(13, Math.min(19, innerWidth * 0.016)));
-  arcTextEl.setAttribute('letter-spacing', Math.max(7,  Math.min(13, innerWidth * 0.011)));
-  arcTextEl.setAttribute('fill',           '#FFD700');
-  arcTextEl.setAttribute('filter',         'url(#txt-shadow)');
-  arcTextEl.setAttribute('font-family',    "'Press Start 2P', monospace");
-  arcTextEl.setAttribute('font-weight',    '700');
-}
-updateArcPath();
-
-// ── Typewriter ────────────────────────────────────────────
-const WORD  = 'BDRSPEN';
-let charIdx = 0, erasing = false, cursorOn = true;
-setInterval(() => { cursorOn = !cursorOn; redraw(); }, 530);
-function redraw() { typingEl.textContent = WORD.slice(0, charIdx) + (cursorOn ? '|' : '\u00a0'); }
-function tick() {
-  if (!erasing) {
-    redraw(); charIdx++;
-    if (charIdx > WORD.length) { charIdx = WORD.length; setTimeout(() => { erasing = true; tick(); }, 2100); return; }
-    setTimeout(tick, 115);
-  } else {
-    charIdx--; redraw();
-    if (charIdx <= 0) { charIdx = 0; erasing = false; setTimeout(tick, 480); return; }
-    setTimeout(tick, 72);
+function makeTyper(el, word, startDelay) {
+  let idx = 0, erasing = false;
+  function draw() {
+    el.textContent = word.slice(0, idx) + (cursorOn ? '|' : '\u00a0');
   }
+  function tick() {
+    if (!erasing) {
+      draw(); idx++;
+      if (idx > word.length) {
+        idx = word.length;
+        setTimeout(() => { erasing = true; tick(); }, 2200);
+        return;
+      }
+      setTimeout(tick, 110);
+    } else {
+      idx--; draw();
+      if (idx <= 0) { idx = 0; erasing = false; setTimeout(tick, 500); return; }
+      setTimeout(tick, 68);
+    }
+  }
+  setInterval(draw, 530); // keep cursor blinking
+  setTimeout(tick, startDelay);
 }
-setTimeout(tick, 700);
+
+makeTyper(enEl, 'bdrspen', 700);
+makeTyper(arEl, 'بدر الفيلكاوي', 900);
 
 // ── Ball squish / bounce on interaction ───────────────────
 document.querySelectorAll('.btn-circle').forEach(ball => {
@@ -552,27 +609,27 @@ document.addEventListener('pointerdown', () => {
 
 // ── Render loop ───────────────────────────────────────────
 const _wp = new THREE.Vector3(); // reused world-position vector
+let frameCount = 0;
 
 (function animate() {
   requestAnimationFrame(animate);
   const delta = clock.getDelta();
   sparkTime += delta;
+  frameCount++;
 
-  // White surface flicker
-  sparkMats.forEach((m, i) => {
-    const phase = sparkTime * 2.8 + i * 1.3;
-    const base  = 0.18 + Math.sin(phase) * 0.09;
-    const flash = Math.random() < 0.004 ? 1.2 : 0;
-    m.emissiveIntensity = base + flash;
-  });
-
-  // Ball spark trail — emit from each white ball's world position
   if (mixer) mixer.update(delta);
 
-  ballObjects.forEach(obj => {
-    obj.getWorldPosition(_wp);
-    // Emit 2 sparks per frame per ball
-    for (let e = 0; e < 2; e++) {
+  // Run heavy effects every other frame only
+  if (frameCount % 2 === 0) {
+    // White surface flicker
+    sparkMats.forEach((m, i) => {
+      const phase = sparkTime * 2.8 + i * 1.3;
+      m.emissiveIntensity = 0.18 + Math.sin(phase) * 0.09;
+    });
+
+    // Ball spark trail
+    ballObjects.forEach(obj => {
+      obj.getWorldPosition(_wp);
       const i = trailHead % TRAIL_MAX;
       trailPos[i*3]   = _wp.x + (Math.random()-0.5)*0.02;
       trailPos[i*3+1] = _wp.y + (Math.random()-0.5)*0.02;
@@ -584,28 +641,26 @@ const _wp = new THREE.Vector3(); // reused world-position vector
         (Math.random()-0.5)*0.055
       );
       trailHead++;
-    }
-  });
+    });
 
-  // Update all trail particles
-  for (let j = 0; j < TRAIL_MAX; j++) {
-    if (trailLife[j] > 0) {
-      trailLife[j] -= delta * 1.6;
-      const l = Math.max(0, trailLife[j]);
-      trailPos[j*3]   += trailVel[j].x;
-      trailPos[j*3+1] += trailVel[j].y - 0.003; // gentle gravity
-      trailPos[j*3+2] += trailVel[j].z;
-      // Orange→red fade: full orange at birth, red as it dies
-      trailCol[j*3]   = l * 1.0;           // R
-      trailCol[j*3+1] = l * l * 0.55;      // G (quadratic → orange tip, red tail)
-      trailCol[j*3+2] = 0;                  // B
-      if (trailLife[j] <= 0) {
-        trailPos[j*3] = trailPos[j*3+1] = trailPos[j*3+2] = 9999; // hide
+    // Update trail particles
+    for (let j = 0; j < TRAIL_MAX; j++) {
+      if (trailLife[j] > 0) {
+        trailLife[j] -= delta * 1.6;
+        const l = Math.max(0, trailLife[j]);
+        trailPos[j*3]   += trailVel[j].x;
+        trailPos[j*3+1] += trailVel[j].y - 0.003;
+        trailPos[j*3+2] += trailVel[j].z;
+        trailCol[j*3]   = l * 1.0;
+        trailCol[j*3+1] = l * l * 0.55;
+        trailCol[j*3+2] = 0;
+        if (trailLife[j] <= 0)
+          trailPos[j*3] = trailPos[j*3+1] = trailPos[j*3+2] = 9999;
       }
     }
+    trailGeo.attributes.position.needsUpdate = true;
+    trailGeo.attributes.color.needsUpdate    = true;
   }
-  trailGeo.attributes.position.needsUpdate = true;
-  trailGeo.attributes.color.needsUpdate    = true;
 
   controls.update();
   renderer.render(scene, camera);
